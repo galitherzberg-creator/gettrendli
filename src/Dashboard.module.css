@@ -1,0 +1,554 @@
+/* Shell + page layout */
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.page {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 80px;
+  position: relative;
+}
+
+/* Header */
+.header {
+  padding: 20px 20px 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 20px;
+}
+
+.greeting {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+
+.weekLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.avatarBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.avatarBtn:hover { opacity: 0.85; }
+
+/* Weight hero card */
+.weightCard {
+  margin: 0 16px 8px;
+  background: var(--card-inverse);
+  border-radius: var(--radius-xl);
+  padding: 24px 24px 22px;
+  color: white;
+}
+
+.weightEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+
+.weightRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.weightValue {
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.weightUnit {
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 2px;
+}
+
+.weightBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.weightBadgeGood {
+  background: rgba(22, 163, 74, 0.2);
+  color: #4ADE80;
+}
+
+.weightBadgeUp {
+  background: rgba(220, 38, 38, 0.2);
+  color: #FCA5A5;
+}
+
+.weightBadgeNeutral {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+}
+
+/* BMI */
+.bmi {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* Projection */
+.projection {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  margin-top: 4px;
+}
+
+/* Goal progress */
+.goalWrap {
+  margin-top: 16px;
+}
+
+.goalBar {
+  height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 7px;
+}
+
+.goalFill {
+  height: 100%;
+  background: white;
+  border-radius: 100px;
+  transition: width 0.6s ease;
+}
+
+.goalLabel {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 400;
+}
+
+.goalPct {
+  font-weight: 700;
+  color: white;
+}
+
+/* Sections */
+.section {
+  padding: 20px 16px 0;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Snapshot grid */
+.snapshotGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.snapshotCard {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.snapshotLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.snapshotValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.snapshotSub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Log status */
+.logStatusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.logCount {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.logCard {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.logGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.logItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logDotDone {
+  background: var(--green);
+}
+
+.logDotEmpty {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+}
+
+.logLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.logLabelDone {
+  color: var(--text-primary);
+}
+
+.logBtn {
+  width: 100%;
+  padding: 13px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: -0.1px;
+}
+
+.logBtn:hover { background: var(--accent-hover); }
+.logBtn:active { transform: scale(0.98); }
+
+/* Today card */
+.todayCard {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 18px 16px 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.todayCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.todayCardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+.todayCardDate {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.todayBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 4px 9px;
+  border-radius: 100px;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.todayBadgeEmpty {
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+
+.todayMetricsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.todayMetric {
+  background: var(--surface);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.todayMetricLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.todayMetricPrimary {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+}
+
+.todayMetricEmpty {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.todayMetricSecondary {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Weekly average header */
+.weeklyHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.weeklyRange {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Insight card */
+.insightCard {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border-left: 3px solid var(--accent);
+}
+
+.insightIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.insightBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.insightText {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.insightLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: gap 0.15s;
+}
+
+.insightLink:hover { gap: 7px; }
+
+/* Bottom nav */
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 8px 4px max(12px, env(safe-area-inset-bottom));
+  z-index: 100;
+}
+
+.navItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+
+.navItem:hover { color: var(--text-secondary); }
+
+.navItemActive {
+  color: var(--accent);
+}
+
+.navItemCenter {
+  background: var(--accent);
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex: none;
+  margin: 0 8px;
+  padding: 0;
+  gap: 0;
+  box-shadow: 0 4px 12px rgba(45, 91, 227, 0.35);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.navItemCenter:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 16px rgba(45, 91, 227, 0.45);
+  color: white;
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Responsive: desktop shows centered card with bg */
+@media (min-width: 520px) {
+  .shell {
+    align-items: flex-start;
+    padding: 32px 0 0;
+    background: var(--surface-2);
+  }
+
+  .page {
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -4px 32px rgba(0,0,0,0.08);
+    background: var(--bg);
+  }
+
+  .bottomNav {
+    border-radius: 0 0 24px 24px;
+  }
+}

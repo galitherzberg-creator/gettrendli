@@ -273,11 +273,11 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
         {/* ── Bottom nav ───────────────────────────────────────────── */}
         <nav className={styles.bottomNav}>
           {[
-            { icon: homeIcon,       label: 'Home',     action: 'dashboard' },
-            { icon: chartIcon,      label: 'Charts',   action: 'charts'   },
-            { icon: plusIcon,       label: 'Log',      action: 'log',      center: true },
-            { icon: insightNavIcon, label: 'Insights', action: 'insights' },
-            { icon: settingsIcon,   label: 'Settings', action: 'settings', active: true },
+            { icon: homeIcon,     label: 'Home',     action: 'dashboard' },
+            { icon: chartIcon,    label: 'Charts',   action: 'charts'   },
+            { icon: plusIcon,     label: 'Log',      action: 'log',      center: true },
+            { icon: measureIcon,  label: 'Measure',  action: 'measurements' },
+            { icon: settingsIcon, label: 'Settings', action: 'settings', active: true },
           ].map(({ icon, label, active, center, action }) => (
             <button key={label} onClick={() => action && onNavigate(action)}
               className={`${styles.navItem} ${active ? styles.navItemActive : ''} ${center ? styles.navItemCenter : ''}`}>
@@ -311,10 +311,10 @@ const plusIcon = (
     <path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 )
-const insightNavIcon = (
+const measureIcon = (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 7v3M10 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <rect x="2" y="7" width="16" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+    <path d="M5 7V5.5M8 7V5M11 7V5.5M14 7V5M5 13v1.5M8 13v2M11 13v1.5M14 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
   </svg>
 )
 const settingsIcon = (

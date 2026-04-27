@@ -279,7 +279,7 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
       steps:            activityOpen ? steps            : null,
       injectionDate:    injectionOpen ? injectionDate   : null,
       dose:             injectionOpen ? dose            : null,
-      weight:           weightOpen   ? weight           : null,
+      weight:           weightOpen ? weight : null,
     }
 
     setLastSaveWasUpdate(isExisting)

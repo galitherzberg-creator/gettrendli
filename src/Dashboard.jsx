@@ -233,7 +233,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
             </div>
             <div className={styles.insightBody}>
               <p className={styles.insightText}>{insightText}</p>
-              <button className={styles.insightLink}>
+              <button className={styles.insightLink} onClick={() => onNavigate('insights')}>
                 View all insights
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2.5 6h7M6.5 3.5 9 6l-2.5 2.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
@@ -246,11 +246,11 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
         {/* ── Bottom nav ───────────────────────────────────────────── */}
         <nav className={styles.bottomNav}>
           {[
-            { icon: homeIcon,       label: 'Home',     active: true },
-            { icon: chartIcon,      label: 'Charts',   active: false, action: 'charts' },
-            { icon: plusIcon,       label: 'Log',      active: false, center: true, action: 'log' },
-            { icon: insightNavIcon, label: 'Insights', active: false, action: 'insights' },
-            { icon: settingsIcon,   label: 'Settings', active: false, action: 'settings' },
+            { icon: homeIcon,        label: 'Home',     active: true },
+            { icon: chartIcon,       label: 'Charts',   active: false, action: 'charts' },
+            { icon: plusIcon,        label: 'Log',      active: false, center: true, action: 'log' },
+            { icon: measureIcon,     label: 'Measure',  active: false, action: 'measurements' },
+            { icon: settingsIcon,    label: 'Settings', active: false, action: 'settings' },
           ].map(({ icon, label, active, center, action }) => (
             <button key={label} onClick={() => action && onNavigate(action)}
               className={`${styles.navItem} ${active ? styles.navItemActive : ''} ${center ? styles.navItemCenter : ''}`}>
@@ -288,6 +288,12 @@ const insightNavIcon = (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
     <circle cx="10" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.4"/>
     <path d="M10 7v3M10 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+)
+const measureIcon = (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <rect x="2" y="7" width="16" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+    <path d="M5 7V5.5M8 7V5M11 7V5.5M14 7V5M5 13v1.5M8 13v2M11 13v1.5M14 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
   </svg>
 )
 const settingsIcon = (

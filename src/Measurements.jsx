@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { todayISO, formatDate } from './logStore'
 import styles from './Measurements.module.css'
 
@@ -53,6 +53,77 @@ function NumberInput({ value, onChange, placeholder }) {
   )
 }
 
+// ── Shape silhouette ─────────────────────────────────────────────────────────
+
+function buildSilhouette(m, sex) {
+  const def = sex === 'male'
+    ? { chest: 98, waist: 88, hips: 94, thighs: 57 }
+    : sex === 'female'
+    ? { chest: 90, waist: 74, hips: 98, thighs: 59 }
+    : { chest: 94, waist: 81, hips: 96, thighs: 58 }
+
+  const chest  = Math.max(parseFloat(m?.chest)  || def.chest,  40)
+  const waist  = Math.max(parseFloat(m?.waist)  || def.waist,  40)
+  const hips   = Math.max(parseFloat(m?.hips)   || def.hips,   40)
+  const thighs = Math.max(parseFloat(m?.thighs) || def.thighs, 30)
+
+  const ref = Math.max(chest, hips, waist)
+  const s   = 21 / ref
+
+  const cx  = 40
+  const sW  = Math.min(chest * s * 1.1, 24)
+  const cW  = chest  * s
+  const wW  = Math.min(waist * s, cW - 0.5)
+  const hW  = hips   * s
+  const tW  = thighs * s * 0.52
+  const kW  = tW * 0.8
+  const aW  = tW * 0.55
+  const nW  = Math.max(cW * 0.29, 4.5)
+
+  const neckT = 23, neckB = 31, shldY = 35
+  const chtY  = 57, wstY  = 82,  hipY  = 102
+  const thgY  = 128, kneY = 150, ankY  = 176, botY = 182
+
+  const f = n => n.toFixed(1)
+  const R = w => f(cx + w)
+  const L = w => f(cx - w)
+
+  return [
+    `M ${L(nW)},${neckT} L ${R(nW)},${neckT}`,
+    `C ${R(sW * 1.6)},${neckB} ${R(sW)},${shldY} ${R(sW)},${shldY}`,
+    `C ${R(sW)},${shldY + 9} ${R(cW)},${chtY - 7} ${R(cW)},${chtY}`,
+    `C ${R(cW)},${chtY + 9} ${R(wW)},${wstY - 9} ${R(wW)},${wstY}`,
+    `C ${R(wW)},${wstY + 9} ${R(hW)},${hipY - 9} ${R(hW)},${hipY}`,
+    `C ${R(hW)},${hipY + 9} ${R(tW)},${thgY - 9} ${R(tW)},${thgY}`,
+    `C ${R(tW)},${thgY + 8} ${R(kW)},${kneY - 8} ${R(kW)},${kneY}`,
+    `C ${R(kW)},${kneY + 8} ${R(aW)},${ankY - 6} ${R(aW)},${ankY}`,
+    `L ${cx},${botY}`,
+    `L ${L(aW)},${ankY}`,
+    `C ${L(aW)},${ankY - 6} ${L(kW)},${kneY + 8} ${L(kW)},${kneY}`,
+    `C ${L(kW)},${kneY - 8} ${L(tW)},${thgY + 8} ${L(tW)},${thgY}`,
+    `C ${L(tW)},${thgY - 9} ${L(hW)},${hipY + 9} ${L(hW)},${hipY}`,
+    `C ${L(hW)},${hipY - 9} ${L(wW)},${wstY + 9} ${L(wW)},${wstY}`,
+    `C ${L(wW)},${wstY - 9} ${L(cW)},${chtY + 9} ${L(cW)},${chtY}`,
+    `C ${L(cW)},${chtY - 7} ${L(sW)},${shldY + 9} ${L(sW)},${shldY}`,
+    `C ${L(sW)},${shldY} ${L(sW * 1.6)},${neckB} ${L(nW)},${neckT} Z`,
+  ].join(' ')
+}
+
+function ShapeSilhouette({ entry, sex, accent, label, date }) {
+  const d  = buildSilhouette(entry, sex)
+  const cx = 40
+  return (
+    <div className={styles.silhouetteWrap}>
+      <svg viewBox="0 0 80 186" className={styles.silhouetteSvg} aria-hidden="true">
+        <circle cx={cx} cy={14} r={9} className={accent ? styles.silAccent : styles.silMuted} />
+        <path d={d}                  className={accent ? styles.silAccent : styles.silMuted} />
+      </svg>
+      <span className={styles.silLabel}>{label}</span>
+      {date && <span className={styles.silDate}>{date}</span>}
+    </div>
+  )
+}
+
 function historySnippet(entry) {
   return FIELDS
     .filter(f => entry[f.key])
@@ -72,6 +143,13 @@ export default function Measurements({ measurements, onUpdateMeasurements, onNav
   const [editingId, setEditingId]   = useState(null)
   const [formDate, setFormDate]     = useState(todayISO)
   const [fields, setFields]         = useState(emptyFields)
+
+  const [shapePreference, setShapePreference] = useState(() => {
+    try { return localStorage.getItem('gt_shape_pref') || 'female' } catch { return 'female' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('gt_shape_pref', shapePreference) } catch {}
+  }, [shapePreference])
 
   function openAdd() {
     setEditingId(null)
@@ -238,6 +316,63 @@ export default function Measurements({ measurements, onUpdateMeasurements, onNav
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Shape Progress Preview */}
+          {!showForm && latest && (
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardTitle}>Shape Progress Preview</span>
+              </div>
+
+              <div className={styles.sexToggle}>
+                {[
+                  { val: 'female', label: 'Female' },
+                  { val: 'male',   label: 'Male'   },
+                  { val: 'any',    label: 'Prefer not to say' },
+                ].map(({ val, label }) => (
+                  <button
+                    key={val}
+                    type="button"
+                    className={`${styles.sexBtn} ${shapePreference === val ? styles.sexBtnActive : ''}`}
+                    onClick={() => setShapePreference(val)}
+                  >{label}</button>
+                ))}
+              </div>
+
+              <div className={styles.silhouettePair}>
+                {first && first.id !== latest.id ? (
+                  <>
+                    <ShapeSilhouette
+                      entry={first}
+                      sex={shapePreference}
+                      accent={false}
+                      label="Start"
+                      date={formatDate(first.date, { month: 'short', year: 'numeric' })}
+                    />
+                    <ShapeSilhouette
+                      entry={latest}
+                      sex={shapePreference}
+                      accent={true}
+                      label="Latest"
+                      date={formatDate(latest.date, { month: 'short', year: 'numeric' })}
+                    />
+                  </>
+                ) : (
+                  <ShapeSilhouette
+                    entry={latest}
+                    sex={shapePreference}
+                    accent={true}
+                    label="Current"
+                    date={formatDate(latest.date, { month: 'short', year: 'numeric' })}
+                  />
+                )}
+              </div>
+
+              <p className={styles.previewDisclaimer}>
+                This preview is a simplified visual aid based on your measurements. It is not an exact body model.
+              </p>
             </div>
           )}
 

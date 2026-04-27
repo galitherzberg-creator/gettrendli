@@ -391,6 +391,88 @@
 
 .cancelBtn:hover { border-color: var(--text-muted); }
 
+/* Sex preference toggle */
+.sexToggle {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sexBtn {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.sexBtn:hover { border-color: var(--text-muted); }
+
+.sexBtnActive {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface);
+  font-weight: 600;
+}
+
+/* Silhouette pair layout */
+.silhouettePair {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 8px 0 4px;
+}
+
+.silhouetteWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 120px;
+}
+
+.silhouetteSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.silAccent { fill: var(--accent); opacity: 0.85; }
+.silMuted  { fill: var(--text-muted); opacity: 0.35; }
+
+.silLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.silDate {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Disclaimer */
+.previewDisclaimer {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 4px 4px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
 .bottomSpacer { height: 90px; }
 
 /* Bottom nav */

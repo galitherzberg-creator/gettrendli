@@ -54,7 +54,13 @@ function NumberInput({ value, onChange, placeholder }) {
 }
 
 // ── Shape silhouette ─────────────────────────────────────────────────────────
-
+//
+// Builds a single closed SVG path tracing:
+//   right neck → right shoulder → right chest → waist → right hip →
+//   right outer leg (down) → right foot → right inner leg (up) → crotch →
+//   left inner leg (down) → left foot → left outer leg (up) →
+//   left hip → waist → left chest → left shoulder → left neck → Z
+//
 function buildSilhouette(m, sex) {
   const def = sex === 'male'
     ? { chest: 98, waist: 88, hips: 94, thighs: 57 }
@@ -67,56 +73,100 @@ function buildSilhouette(m, sex) {
   const hips   = Math.max(parseFloat(m?.hips)   || def.hips,   40)
   const thighs = Math.max(parseFloat(m?.thighs) || def.thighs, 30)
 
+  // Normalize: max half-width 21 px in 80 px-wide viewBox
   const ref = Math.max(chest, hips, waist)
   const s   = 21 / ref
-
   const cx  = 40
-  const sW  = Math.min(chest * s * 1.1, 24)
-  const cW  = chest  * s
-  const wW  = Math.min(waist * s, cW - 0.5)
-  const hW  = hips   * s
-  const tW  = thighs * s * 0.52
-  const kW  = tW * 0.8
-  const aW  = tW * 0.55
-  const nW  = Math.max(cW * 0.29, 4.5)
 
-  const neckT = 23, neckB = 31, shldY = 35
-  const chtY  = 57, wstY  = 82,  hipY  = 102
-  const thgY  = 128, kneY = 150, ankY  = 176, botY = 182
+  // ── Half-widths from centre ──
+  const nW    = Math.max(chest * s * 0.27, 4.5)
+  // Male: broader shoulders relative to hips; female/neutral: more hip flare
+  const sW    = sex === 'male'
+    ? Math.min(chest * s * 1.18, 24)
+    : Math.min(chest * s * 1.08, 23)
+  const cW    = chest * s
+  // Waist must stay between neck-width and the narrower of chest/hips
+  const wW    = Math.min(Math.max(waist * s, nW + 2), Math.min(cW, hips * s) - 1)
+  const hW    = Math.min(hips * s, 22)
+  // Outer thigh half-width per leg
+  const tOutW = Math.min(thighs * s * 0.78, hW * 0.90)
+  const tInnW = Math.max(tOutW * 0.38, 3.5)   // inner leg edge (close to centre)
+  const kOutW = tOutW * 0.84
+  const kInnW = Math.max(kOutW * 0.40, 3.0)
+  const aOutW = tOutW * 0.58
+  const aInnW = Math.max(aOutW * 0.42, 2.0)
+  const gapHW = 2.5   // half of crotch gap
+
+  // ── Y coordinates (top = 0) ──
+  const headCY  = 13
+  const neckT   = headCY + 9   // 22 — bottom of head circle
+  const neckB   = 30
+  const shldY   = 33
+  const chtY    = 55
+  const wstY    = 79
+  const hipY    = 100
+  const crotchY = 114
+  const thgY    = 134
+  const kneY    = 155
+  const ankY    = 175
 
   const f = n => n.toFixed(1)
   const R = w => f(cx + w)
   const L = w => f(cx - w)
+  // Shoulder control-point capped to stay inside viewBox
+  const scpR = f(Math.min(cx + sW * 1.42, 73))
+  const scpL = f(Math.max(cx - sW * 1.42, 7))
 
   return [
-    `M ${L(nW)},${neckT} L ${R(nW)},${neckT}`,
-    `C ${R(sW * 1.6)},${neckB} ${R(sW)},${shldY} ${R(sW)},${shldY}`,
-    `C ${R(sW)},${shldY + 9} ${R(cW)},${chtY - 7} ${R(cW)},${chtY}`,
-    `C ${R(cW)},${chtY + 9} ${R(wW)},${wstY - 9} ${R(wW)},${wstY}`,
-    `C ${R(wW)},${wstY + 9} ${R(hW)},${hipY - 9} ${R(hW)},${hipY}`,
-    `C ${R(hW)},${hipY + 9} ${R(tW)},${thgY - 9} ${R(tW)},${thgY}`,
-    `C ${R(tW)},${thgY + 8} ${R(kW)},${kneY - 8} ${R(kW)},${kneY}`,
-    `C ${R(kW)},${kneY + 8} ${R(aW)},${ankY - 6} ${R(aW)},${ankY}`,
-    `L ${cx},${botY}`,
-    `L ${L(aW)},${ankY}`,
-    `C ${L(aW)},${ankY - 6} ${L(kW)},${kneY + 8} ${L(kW)},${kneY}`,
-    `C ${L(kW)},${kneY - 8} ${L(tW)},${thgY + 8} ${L(tW)},${thgY}`,
-    `C ${L(tW)},${thgY - 9} ${L(hW)},${hipY + 9} ${L(hW)},${hipY}`,
-    `C ${L(hW)},${hipY - 9} ${L(wW)},${wstY + 9} ${L(wW)},${wstY}`,
-    `C ${L(wW)},${wstY - 9} ${L(cW)},${chtY + 9} ${L(cW)},${chtY}`,
-    `C ${L(cW)},${chtY - 7} ${L(sW)},${shldY + 9} ${L(sW)},${shldY}`,
-    `C ${L(sW)},${shldY} ${L(sW * 1.6)},${neckB} ${L(nW)},${neckT} Z`,
+    // ── Right neck ──
+    `M ${R(nW)},${neckT}`,
+    // ── Right shoulder sweep ──
+    `C ${scpR},${neckB} ${R(sW)},${shldY - 1} ${R(sW)},${shldY}`,
+    // ── Right armhole → chest ──
+    `C ${R(sW)},${shldY + 10} ${R(cW)},${chtY - 7} ${R(cW)},${chtY}`,
+    // ── Right chest → waist (inward) ──
+    `C ${R(cW)},${chtY + 10} ${R(wW)},${wstY - 10} ${R(wW)},${wstY}`,
+    // ── Right waist → hip (outward) ──
+    `C ${R(wW)},${wstY + 10} ${R(hW)},${hipY - 10} ${R(hW)},${hipY}`,
+    // ── Right OUTER leg: hip → outer thigh → outer knee → outer ankle ──
+    `C ${R(hW)},${hipY + 12} ${R(tOutW)},${thgY - 10} ${R(tOutW)},${thgY}`,
+    `C ${R(tOutW)},${thgY + 8} ${R(kOutW)},${kneY - 8} ${R(kOutW)},${kneY}`,
+    `C ${R(kOutW)},${kneY + 8} ${R(aOutW)},${ankY - 5} ${R(aOutW)},${ankY}`,
+    // ── Right foot (flat step to inner ankle) ──
+    `L ${R(aInnW)},${ankY}`,
+    // ── Right INNER leg going UP: ankle → knee → thigh → crotch ──
+    `C ${R(aInnW)},${ankY - 5} ${R(kInnW)},${kneY + 8} ${R(kInnW)},${kneY}`,
+    `C ${R(kInnW)},${kneY - 8} ${R(tInnW)},${thgY + 8} ${R(tInnW)},${thgY}`,
+    `C ${R(tInnW)},${thgY - 10} ${R(gapHW)},${crotchY + 6} ${R(gapHW)},${crotchY}`,
+    // ── Crotch: gentle Q-curve connecting the two legs ──
+    `Q ${cx},${crotchY + 5} ${L(gapHW)},${crotchY}`,
+    // ── Left INNER leg going DOWN: crotch → thigh → knee → ankle ──
+    `C ${L(gapHW)},${crotchY + 6} ${L(tInnW)},${thgY - 10} ${L(tInnW)},${thgY}`,
+    `C ${L(tInnW)},${thgY + 8} ${L(kInnW)},${kneY - 8} ${L(kInnW)},${kneY}`,
+    `C ${L(kInnW)},${kneY + 8} ${L(aInnW)},${ankY - 5} ${L(aInnW)},${ankY}`,
+    // ── Left foot (flat step to outer ankle) ──
+    `L ${L(aOutW)},${ankY}`,
+    // ── Left OUTER leg going UP: ankle → knee → thigh → hip ──
+    `C ${L(aOutW)},${ankY - 5} ${L(kOutW)},${kneY + 8} ${L(kOutW)},${kneY}`,
+    `C ${L(kOutW)},${kneY - 8} ${L(tOutW)},${thgY + 8} ${L(tOutW)},${thgY}`,
+    `C ${L(tOutW)},${thgY - 10} ${L(hW)},${hipY + 12} ${L(hW)},${hipY}`,
+    // ── Left torso: hip → waist → chest → shoulder ──
+    `C ${L(hW)},${hipY - 10} ${L(wW)},${wstY + 10} ${L(wW)},${wstY}`,
+    `C ${L(wW)},${wstY - 10} ${L(cW)},${chtY + 10} ${L(cW)},${chtY}`,
+    `C ${L(cW)},${chtY - 7} ${L(sW)},${shldY + 10} ${L(sW)},${shldY}`,
+    // ── Left shoulder back to neck ──
+    `C ${L(sW)},${shldY - 1} ${scpL},${neckB} ${L(nW)},${neckT}`,
+    'Z',
   ].join(' ')
 }
 
 function ShapeSilhouette({ entry, sex, accent, label, date }) {
-  const d  = buildSilhouette(entry, sex)
-  const cx = 40
+  const d = buildSilhouette(entry, sex)
   return (
     <div className={styles.silhouetteWrap}>
-      <svg viewBox="0 0 80 186" className={styles.silhouetteSvg} aria-hidden="true">
-        <circle cx={cx} cy={14} r={9} className={accent ? styles.silAccent : styles.silMuted} />
-        <path d={d}                  className={accent ? styles.silAccent : styles.silMuted} />
+      <svg viewBox="0 0 80 180" className={styles.silhouetteSvg} aria-hidden="true">
+        <circle cx={40} cy={13} r={9} className={accent ? styles.silAccent : styles.silMuted} />
+        <path d={d}             className={accent ? styles.silAccent : styles.silMuted} />
       </svg>
       <span className={styles.silLabel}>{label}</span>
       {date && <span className={styles.silDate}>{date}</span>}

@@ -78,24 +78,43 @@ function buildSilhouette(m, sex) {
   const s   = 21 / ref
   const cx  = 40
 
+  const isFemale = sex === 'female'
+  const isMale   = sex === 'male'
+
   // ── Half-widths from centre ──
-  const nW    = Math.max(chest * s * 0.27, 4.5)
-  // Male: broader shoulders relative to hips; female/neutral: more hip flare
-  const sW    = sex === 'male'
-    ? Math.min(chest * s * 1.18, 24)
-    : Math.min(chest * s * 1.08, 23)
-  const cW    = chest * s
-  // Waist must stay between neck-width and the narrower of chest/hips
-  const wW    = Math.min(Math.max(waist * s, nW + 2), Math.min(cW, hips * s) - 1)
-  const hW    = Math.min(hips * s, 22)
+  const nW = Math.max(chest * s * 0.27, 4.5)
+
+  // Shoulders: male clearly wider (inverted triangle), female close to chest
+  const sW = isMale
+    ? Math.min(chest * s * 1.32, 25)
+    : isFemale
+    ? Math.min(chest * s * 1.04, 22)
+    : Math.min(chest * s * 1.15, 23)
+
+  const cW = chest * s
+
+  // Hips: female boosted for hourglass, male compressed for straight silhouette
+  const hW = Math.min(
+    isFemale ? hips * s * 1.06 : isMale ? hips * s * 0.86 : hips * s,
+    22
+  )
+
+  // Waist: female deeply cinched, male barely narrower than hips
+  const waistMult = isFemale ? 0.76 : isMale ? 0.94 : 0.85
+  const wW = Math.min(Math.max(waist * s * waistMult, nW + 2), Math.min(cW, hW) - 1)
+
   // Outer thigh half-width per leg
   const tOutW = Math.min(thighs * s * 0.78, hW * 0.90)
-  const tInnW = Math.max(tOutW * 0.38, 3.5)   // inner leg edge (close to centre)
+  const tInnW = Math.max(tOutW * 0.38, 3.5)
   const kOutW = tOutW * 0.84
   const kInnW = Math.max(kOutW * 0.40, 3.0)
   const aOutW = tOutW * 0.58
   const aInnW = Math.max(aOutW * 0.42, 2.0)
-  const gapHW = 2.5   // half of crotch gap
+  const gapHW = 2.5
+
+  // Curve tension: female = more pronounced bends, male = straighter lines
+  const bend     = isFemale ? 13 : isMale ? 6 : 10
+  const hipFlare = isFemale ? 15 : isMale ? 7 : 11
 
   // ── Y coordinates (top = 0) ──
   const headCY  = 13
@@ -125,11 +144,11 @@ function buildSilhouette(m, sex) {
     // ── Right armhole → chest ──
     `C ${R(sW)},${shldY + 10} ${R(cW)},${chtY - 7} ${R(cW)},${chtY}`,
     // ── Right chest → waist (inward) ──
-    `C ${R(cW)},${chtY + 10} ${R(wW)},${wstY - 10} ${R(wW)},${wstY}`,
+    `C ${R(cW)},${chtY + bend} ${R(wW)},${wstY - bend} ${R(wW)},${wstY}`,
     // ── Right waist → hip (outward) ──
-    `C ${R(wW)},${wstY + 10} ${R(hW)},${hipY - 10} ${R(hW)},${hipY}`,
+    `C ${R(wW)},${wstY + bend} ${R(hW)},${hipY - bend} ${R(hW)},${hipY}`,
     // ── Right OUTER leg: hip → outer thigh → outer knee → outer ankle ──
-    `C ${R(hW)},${hipY + 12} ${R(tOutW)},${thgY - 10} ${R(tOutW)},${thgY}`,
+    `C ${R(hW)},${hipY + hipFlare} ${R(tOutW)},${thgY - 10} ${R(tOutW)},${thgY}`,
     `C ${R(tOutW)},${thgY + 8} ${R(kOutW)},${kneY - 8} ${R(kOutW)},${kneY}`,
     `C ${R(kOutW)},${kneY + 8} ${R(aOutW)},${ankY - 5} ${R(aOutW)},${ankY}`,
     // ── Right foot (flat step to inner ankle) ──
@@ -149,10 +168,10 @@ function buildSilhouette(m, sex) {
     // ── Left OUTER leg going UP: ankle → knee → thigh → hip ──
     `C ${L(aOutW)},${ankY - 5} ${L(kOutW)},${kneY + 8} ${L(kOutW)},${kneY}`,
     `C ${L(kOutW)},${kneY - 8} ${L(tOutW)},${thgY + 8} ${L(tOutW)},${thgY}`,
-    `C ${L(tOutW)},${thgY - 10} ${L(hW)},${hipY + 12} ${L(hW)},${hipY}`,
+    `C ${L(tOutW)},${thgY - 10} ${L(hW)},${hipY + hipFlare} ${L(hW)},${hipY}`,
     // ── Left torso: hip → waist → chest → shoulder ──
-    `C ${L(hW)},${hipY - 10} ${L(wW)},${wstY + 10} ${L(wW)},${wstY}`,
-    `C ${L(wW)},${wstY - 10} ${L(cW)},${chtY + 10} ${L(cW)},${chtY}`,
+    `C ${L(hW)},${hipY - bend} ${L(wW)},${wstY + bend} ${L(wW)},${wstY}`,
+    `C ${L(wW)},${wstY - bend} ${L(cW)},${chtY + bend} ${L(cW)},${chtY}`,
     `C ${L(cW)},${chtY - 7} ${L(sW)},${shldY + 10} ${L(sW)},${shldY}`,
     // ── Left shoulder back to neck ──
     `C ${L(sW)},${shldY - 1} ${scpL},${neckB} ${L(nW)},${neckT}`,

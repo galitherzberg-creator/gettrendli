@@ -514,6 +514,74 @@
   font-weight: 500;
 }
 
+/* Mood card */
+.moodCard {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.moodHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.moodOptional {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.moodGrid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.moodBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 8px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  flex: 1;
+  min-width: 52px;
+}
+
+.moodBtn:hover { border-color: var(--text-muted); }
+
+.moodBtnActive {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.moodIcon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.moodLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.moodBtnActive .moodLabel {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* Save area */
 .saveSpacor {
   height: 100px;

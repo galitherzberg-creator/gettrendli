@@ -171,7 +171,7 @@ export default function Insights({ onNavigate }) {
           <section>
             <h2 className={styles.sectionTitle}>Week-by-week</h2>
             <div className={styles.weekCards}>
-              {mockWeeklyRows.map(row => (
+              {mockWeeklyRows.slice(-4).map(row => (
                 <div key={row.week} className={`${styles.weekCard} ${row.best ? styles.weekCardBest : ''}`}>
                   <div className={styles.weekCardHeader}>
                     <span className={styles.weekCardLabel}>{row.week}</span>

@@ -24,10 +24,11 @@ function computeTDEE(sex, age, heightCm, weightKg, activity) {
 
 export default function Settings({ userSettings, onSaveSettings, theme, onThemeChange, onNavigate }) {
   // Profile
-  const [name, setName]             = useState(userSettings.name)
-  const [goalWeight, setGoalWeight] = useState(String(userSettings.goalWeight))
-  const [height, setHeight]         = useState(String(userSettings.height ?? ''))
-  const [profileSaved, setProfileSaved] = useState(false)
+  const [name, setName]                       = useState(userSettings.name)
+  const [goalWeight, setGoalWeight]           = useState(String(userSettings.goalWeight))
+  const [height, setHeight]                   = useState(String(userSettings.height ?? ''))
+  const [injectionInterval, setInjInterval]   = useState(userSettings.injectionInterval ?? 7)
+  const [profileSaved, setProfileSaved]       = useState(false)
 
   // TDEE
   const [sex,        setSex]        = useState('female')
@@ -42,7 +43,7 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
   function handleProfileSave() {
     const parsed = parseFloat(goalWeight)
     if (!name.trim() || isNaN(parsed) || parsed <= 0) return
-    onSaveSettings({ ...userSettings, name: name.trim(), goalWeight: parsed, height: parseFloat(height) || userSettings.height })
+    onSaveSettings({ ...userSettings, name: name.trim(), goalWeight: parsed, height: parseFloat(height) || userSettings.height, injectionInterval })
     setProfileSaved(true)
     setTimeout(() => setProfileSaved(false), 2000)
   }
@@ -135,6 +136,22 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
                   />
                   <span className={styles.unit}>cm</span>
                 </div>
+              </div>
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>Injection frequency</label>
+              <div className={styles.toggle}>
+                {[7, 14].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`${styles.toggleBtn} ${injectionInterval === n ? styles.toggleBtnActive : ''}`}
+                    onClick={() => setInjInterval(n)}
+                  >
+                    Every {n} days
+                  </button>
+                ))}
               </div>
             </div>
 

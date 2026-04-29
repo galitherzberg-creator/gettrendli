@@ -470,6 +470,89 @@
 
 .insightLink:hover { gap: 7px; }
 
+/* Injection countdown banner */
+.injBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: var(--accent-light);
+  border: 1px solid rgba(45, 91, 227, 0.15);
+  border-radius: var(--radius-md);
+}
+
+.injBannerOverdue {
+  background: rgba(220, 38, 38, 0.07);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.injBannerToday {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
+.injBannerIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.injBannerOverdue .injBannerIcon {
+  background: #EF4444;
+}
+
+.injBannerToday .injBannerIcon {
+  background: var(--green);
+}
+
+.injBannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.injBannerLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.injBannerValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.1px;
+}
+
+.injBannerOverdue .injBannerValue { color: #EF4444; }
+.injBannerToday .injBannerValue   { color: var(--green); }
+
+/* Today mood row */
+.todayMoodRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+
+.todayMoodIcon { font-size: 16px; line-height: 1; }
+
+.todayMoodText {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 /* Bottom nav */
 .bottomNav {
   position: fixed;

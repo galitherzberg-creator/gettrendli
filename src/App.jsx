@@ -4,10 +4,9 @@ import LogToday from './LogToday'
 import Insights from './Insights'
 import Settings from './Settings'
 import Measurements from './Measurements'
+import Onboarding from './Onboarding'
 
 const Charts = lazy(() => import('./Charts'))
-import { initialLogs } from './logStore'
-import { mockUser } from './mockData'
 
 function load(key, fallback) {
   try {
@@ -19,18 +18,23 @@ function load(key, fallback) {
 }
 
 const defaultSettings = {
-  name: mockUser.name,
-  startWeight: mockUser.startWeight,
-  goalWeight: mockUser.goalWeight,
+  name: '',
+  startWeight: 0,
+  goalWeight: 0,
   height: 165,
+  injectionInterval: 7,
+  lastInjectionDate: null,
 }
 
 export default function App() {
   const [screen, setScreen]               = useState('dashboard')
-  const [logs, setLogs]                   = useState(() => load('gt_logs', initialLogs))
+  const [logs, setLogs]                   = useState(() => load('gt_logs', {}))
   const [userSettings, setUserSettings]   = useState(() => load('gt_settings', defaultSettings))
   const [theme, setTheme]                 = useState(() => load('gt_theme', 'light'))
   const [measurements, setMeasurements]   = useState(() => load('gt_measurements', []))
+
+  // Skip onboarding for users who already have a saved name
+  const [onboarded, setOnboarded]         = useState(() => !!(load('gt_settings', null)?.name))
 
   useEffect(() => { localStorage.setItem('gt_logs',         JSON.stringify(logs))         }, [logs])
   useEffect(() => { localStorage.setItem('gt_settings',     JSON.stringify(userSettings)) }, [userSettings])
@@ -43,6 +47,13 @@ export default function App() {
   function updateLog(date, values) {
     setLogs(prev => ({ ...prev, [date]: values }))
   }
+
+  function handleOnboardingComplete(settings) {
+    setUserSettings(settings)
+    setOnboarded(true)
+  }
+
+  if (!onboarded) return <Onboarding onComplete={handleOnboardingComplete} />
 
   if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} onNavigate={setScreen} />
   if (screen === 'insights')     return <Insights onNavigate={setScreen} />

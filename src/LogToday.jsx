@@ -4,6 +4,14 @@ import styles from './LogToday.module.css'
 
 const ACTIVITY_TYPES = ['Walk', 'Run', 'Gym', 'Swim', 'Other']
 
+const MOODS = [
+  { value: 'great',        label: 'Great',        icon: '😊' },
+  { value: 'good',         label: 'Good',         icon: '🙂' },
+  { value: 'nauseous',     label: 'Nauseous',     icon: '🤢' },
+  { value: 'tired',        label: 'Tired',        icon: '😴' },
+  { value: 'low-appetite', label: 'Low appetite', icon: '🍽️' },
+]
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function addDays(iso, n) {
@@ -179,7 +187,7 @@ function emptyForm(date) {
     calories: '', protein: '',
     activityType: 'Walk', activityDuration: '', steps: '',
     injectionDate: date, dose: 0.5,
-    weight: '',
+    weight: '', mood: null,
   }
 }
 
@@ -193,6 +201,7 @@ function formFromEntry(entry, date) {
     injectionDate:    entry.injectionDate    ?? date,
     dose:             entry.dose             ?? 0.5,
     weight:           entry.weight           ?? '',
+    mood:             entry.mood             ?? null,
   }
 }
 
@@ -210,6 +219,8 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
   const [injectionDate, setInjectionDate]     = useState(todayISO)
   const [dose, setDose]                       = useState(0.5)
   const [weight, setWeight]                   = useState('')
+
+  const [mood, setMood]                       = useState(null)
 
   // Section open state
   const [activityOpen, setActivityOpen]       = useState(false)
@@ -236,6 +247,7 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
       setDose(f.dose)
       setWeight(f.weight)
       // Auto-expand sections that have data
+      setMood(f.mood)
       setActivityOpen(!!f.activityDuration)
       setInjectionOpen(!!entry.dose)
       setWeightOpen(!!f.weight)
@@ -244,7 +256,7 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
       setCalories(f.calories); setProtein(f.protein)
       setActivityType(f.activityType); setActivityDuration(f.activityDuration); setSteps(f.steps)
       setInjectionDate(f.injectionDate); setDose(f.dose)
-      setWeight(f.weight)
+      setWeight(f.weight); setMood(null)
       setActivityOpen(false); setInjectionOpen(false); setWeightOpen(false)
     }
     setCalError(false)
@@ -273,6 +285,7 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
     const values = {
       calories,
       protein,
+      mood,
       // Only persist optional sections if they were opened
       activityType:     activityOpen ? activityType     : null,
       activityDuration: activityOpen ? activityDuration : null,
@@ -428,6 +441,35 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
               <NumberInput value={weight} onChange={setWeight} placeholder="83.4" unit="kg" step="0.1" />
             </FieldGroup>
           </CollapsibleSection>
+
+          {/* How are you feeling today */}
+          <div className={styles.moodCard}>
+            <div className={styles.moodHeader}>
+              <span className={styles.sectionIcon}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M5 8.5c.5.8 1.5 1.2 2 1.2s1.5-.4 2-1.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  <circle cx="5" cy="5.5" r=".75" fill="currentColor"/>
+                  <circle cx="9" cy="5.5" r=".75" fill="currentColor"/>
+                </svg>
+              </span>
+              <span className={styles.sectionTitle}>How are you feeling?</span>
+              <span className={styles.moodOptional}>Optional</span>
+            </div>
+            <div className={styles.moodGrid}>
+              {MOODS.map(m => (
+                <button
+                  key={m.value}
+                  type="button"
+                  className={`${styles.moodBtn} ${mood === m.value ? styles.moodBtnActive : ''}`}
+                  onClick={() => setMood(prev => prev === m.value ? null : m.value)}
+                >
+                  <span className={styles.moodIcon}>{m.icon}</span>
+                  <span className={styles.moodLabel}>{m.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className={styles.saveSpacor} />
         </div>

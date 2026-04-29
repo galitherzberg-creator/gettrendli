@@ -1,6 +1,14 @@
-import { mockUser, mockInsight } from './mockData'
+import { mockInsight } from './mockData'
 import { computeWeeklyData, getWeekLabel, todayISO, formatDate } from './logStore'
 import styles from './Dashboard.module.css'
+
+const MOOD_MAP = {
+  great:         { label: 'Great',        icon: '😊' },
+  good:          { label: 'Good',         icon: '🙂' },
+  nauseous:      { label: 'Nauseous',     icon: '🤢' },
+  tired:         { label: 'Tired',        icon: '😴' },
+  'low-appetite':{ label: 'Low appetite', icon: '🍽️' },
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -50,6 +58,23 @@ function computeBMI(weightKg, heightCm) {
   return (parseFloat(weightKg) / (m * m)).toFixed(1)
 }
 
+function computeNextInjection(logs, userSettings) {
+  const { injectionInterval = 7, lastInjectionDate } = userSettings
+  let latestInjDate = lastInjectionDate ?? null
+  for (const entry of Object.values(logs)) {
+    if (entry.injectionDate && (!latestInjDate || entry.injectionDate > latestInjDate)) {
+      latestInjDate = entry.injectionDate
+    }
+  }
+  if (!latestInjDate) return null
+  const last = new Date(latestInjDate + 'T12:00:00')
+  const next = new Date(last)
+  next.setDate(next.getDate() + injectionInterval)
+  const today = new Date(todayISO + 'T12:00:00')
+  const daysUntil = Math.round((next - today) / 86400000)
+  return { daysUntil, nextDate: next.toISOString().split('T')[0] }
+}
+
 function computeProjection(logs, goalWeight) {
   const entries = Object.entries(logs)
     .filter(([, v]) => v.weight)
@@ -96,6 +121,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
   const kgToGo       = latestWeight ? Math.max(0, latestWeight - goalWeight).toFixed(1) : null
   const bmi           = computeBMI(latestWeight, height)
   const projectedDate = computeProjection(logs, goalWeight)
+  const nextInj       = computeNextInjection(logs, userSettings)
 
   return (
     <div className={styles.shell}>
@@ -139,6 +165,30 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
           )}
         </section>
 
+        {/* ── Injection countdown ─────────────────────────────────── */}
+        {nextInj && (
+          <section className={styles.section} style={{ paddingTop: 12 }}>
+            <div className={`${styles.injBanner} ${nextInj.daysUntil < 0 ? styles.injBannerOverdue : nextInj.daysUntil === 0 ? styles.injBannerToday : ''}`}>
+              <div className={styles.injBannerIcon}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.5 2.5l2 2-7 7-3 .5.5-3 7-6.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9.5 4.5l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div className={styles.injBannerText}>
+                <span className={styles.injBannerLabel}>Next injection</span>
+                <span className={styles.injBannerValue}>
+                  {nextInj.daysUntil === 0
+                    ? 'Due today'
+                    : nextInj.daysUntil < 0
+                    ? `${Math.abs(nextInj.daysUntil)} day${Math.abs(nextInj.daysUntil) !== 1 ? 's' : ''} overdue`
+                    : `In ${nextInj.daysUntil} day${nextInj.daysUntil !== 1 ? 's' : ''}`}
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ── Today ── primary, above weekly ──────────────────────── */}
         <section className={styles.section}>
           <div className={styles.todayCard}>
@@ -177,6 +227,13 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
                 logged={hasInjection}
               />
             </div>
+
+            {todayLog.mood && MOOD_MAP[todayLog.mood] && (
+              <div className={styles.todayMoodRow}>
+                <span className={styles.todayMoodIcon}>{MOOD_MAP[todayLog.mood].icon}</span>
+                <span className={styles.todayMoodText}>Feeling {MOOD_MAP[todayLog.mood].label.toLowerCase()} today</span>
+              </div>
+            )}
 
             <button
               data-testid="log-today-btn"

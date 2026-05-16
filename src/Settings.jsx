@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import styles from './Settings.module.css'
+import TipBanner, { useTip } from './TipBanner'
 
 // ── TDEE logic ────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ function computeTDEE(sex, age, heightCm, weightKg, activity) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Settings({ userSettings, onSaveSettings, theme, onThemeChange, onNavigate }) {
+  const tip = useTip('settings')
   // Profile
   const [name, setName]                       = useState(userSettings.name)
   const [goalWeight, setGoalWeight]           = useState(String(userSettings.goalWeight))
@@ -70,6 +72,13 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
         <header className={styles.header}>
           <h1 className={styles.headerTitle}>Settings</h1>
         </header>
+
+        {tip.visible && (
+          <TipBanner
+            text="Set your goal type and daily protein target in Profile to unlock direction-aware tracking on the dashboard."
+            onDismiss={tip.dismiss}
+          />
+        )}
 
         <div className={styles.scrollContent}>
 
@@ -173,8 +182,8 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
               <label className={styles.label}>Goal type</label>
               <div className={styles.toggle}>
                 {[
-                  { value: 'lose', label: '🔥 Lose fat' },
-                  { value: 'gain', label: '💪 Gain / build muscle' },
+                  { value: 'lose', label: 'Lose fat' },
+                  { value: 'gain', label: 'Gain / build muscle' },
                 ].map(o => (
                   <button
                     key={o.value}

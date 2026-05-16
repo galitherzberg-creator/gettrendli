@@ -57,10 +57,14 @@ export default function App() {
 
   if (!onboarded) return <Onboarding onComplete={handleOnboardingComplete} />
 
-  if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} onNavigate={setScreen} />
-  if (screen === 'insights')     return <Insights onNavigate={setScreen} />
-  if (screen === 'charts')       return <Suspense fallback={null}><Charts theme={theme} onNavigate={setScreen} /></Suspense>
-  if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} theme={theme} onThemeChange={setTheme} onNavigate={setScreen} />
-  if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} onNavigate={setScreen} />
-  return <Dashboard logs={logs} userSettings={userSettings} onNavigate={setScreen} />
+  const screenEl = (() => {
+    if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} onNavigate={setScreen} />
+    if (screen === 'insights')     return <Insights onNavigate={setScreen} />
+    if (screen === 'charts')       return <Suspense fallback={null}><Charts theme={theme} onNavigate={setScreen} /></Suspense>
+    if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} theme={theme} onThemeChange={setTheme} onNavigate={setScreen} />
+    if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} onNavigate={setScreen} />
+    return <Dashboard logs={logs} userSettings={userSettings} onNavigate={setScreen} />
+  })()
+
+  return <div key={screen} className="screen-transition">{screenEl}</div>
 }

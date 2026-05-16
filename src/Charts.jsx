@@ -3,6 +3,7 @@ import {
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import styles from './Charts.module.css'
+import TipBanner, { useTip } from './TipBanner'
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,8 @@ function ChartCard({ title, description, children }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Charts({ theme, onNavigate }) {
-  const isDark      = theme === 'dark'
+  const isDark = theme === 'dark'
+  const tip    = useTip('charts')
   const weightColor  = isDark ? '#E0E0E0' : '#0F0F0F'
   const barFill      = isDark ? '#2A2A2A' : '#EAEAE7'
   const barStroke    = isDark ? '#666666' : '#0F0F0F'
@@ -111,6 +113,13 @@ export default function Charts({ theme, onNavigate }) {
   return (
     <div className={styles.shell}>
       <div className={styles.page}>
+
+        {tip.visible && (
+          <TipBanner
+            text="Charts currently show sample data. They'll update automatically as you log more weeks."
+            onDismiss={tip.dismiss}
+          />
+        )}
 
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={styles.header}>

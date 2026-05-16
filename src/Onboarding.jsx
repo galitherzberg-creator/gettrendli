@@ -64,7 +64,6 @@ export default function Onboarding({ onComplete }) {
 
           {step === 1 && (
             <div className={styles.stepWrap}>
-              <div className={styles.heroEmoji}>👋</div>
               <h1 className={styles.stepTitle}>Welcome to Gettrendli</h1>
               <p className={styles.stepDesc}>
                 Your GLP-1 companion. Let's personalise your experience — it only takes a minute.
@@ -87,7 +86,6 @@ export default function Onboarding({ onComplete }) {
 
           {step === 2 && (
             <div className={styles.stepWrap}>
-              <div className={styles.heroEmoji}>⚖️</div>
               <h1 className={styles.stepTitle}>Your weight goal</h1>
               <p className={styles.stepDesc}>
                 {goalType === 'gain'
@@ -98,8 +96,8 @@ export default function Onboarding({ onComplete }) {
                 <label className={styles.label}>What's your goal?</label>
                 <div className={styles.intervalToggle}>
                   {[
-                    { value: 'lose', label: '🔥 Lose fat' },
-                    { value: 'gain', label: '💪 Gain / build muscle' },
+                    { value: 'lose', label: 'Lose fat' },
+                    { value: 'gain', label: 'Gain / build muscle' },
                   ].map(o => (
                     <button
                       key={o.value}
@@ -160,7 +158,6 @@ export default function Onboarding({ onComplete }) {
 
           {step === 3 && (
             <div className={styles.stepWrap}>
-              <div className={styles.heroEmoji}>💉</div>
               <h1 className={styles.stepTitle}>Injection schedule</h1>
               <p className={styles.stepDesc}>
                 We'll show a countdown so you always know when your next dose is due.

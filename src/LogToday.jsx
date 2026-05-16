@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { todayISO, isoDate, formatDate } from './logStore'
 import styles from './LogToday.module.css'
+import TipBanner, { useTip } from './TipBanner'
 
 const ACTIVITY_TYPES = ['Walk', 'Run', 'Gym', 'Swim', 'Other']
 
@@ -10,6 +11,16 @@ const MOODS = [
   { value: 'nauseous',     label: 'Nauseous',     icon: '🤢' },
   { value: 'tired',        label: 'Tired',        icon: '😴' },
   { value: 'low-appetite', label: 'Low appetite', icon: '🍽️' },
+]
+
+const SIDE_EFFECTS = [
+  { value: 'nausea',        label: 'Nausea' },
+  { value: 'fatigue',       label: 'Fatigue' },
+  { value: 'headache',      label: 'Headache' },
+  { value: 'constipation',  label: 'Constipation' },
+  { value: 'diarrhea',      label: 'Diarrhea' },
+  { value: 'dizziness',     label: 'Dizziness' },
+  { value: 'inj-site',      label: 'Inj. site' },
 ]
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -168,6 +179,36 @@ function DoseStepper({ value, onChange }) {
   )
 }
 
+function WaterStepper({ value, onChange }) {
+  const dec = () => onChange(Math.max(0, value - 1))
+  const inc = () => onChange(Math.min(12, value + 1))
+  return (
+    <div className={styles.waterStepperWrap}>
+      <div className={styles.stepper}>
+        <button className={styles.stepperBtn} onClick={dec} type="button" aria-label="Decrease" disabled={value <= 0}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 7h8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <div className={styles.stepperVal}>
+          <span className={styles.stepperNum}>{value}</span>
+          <span className={styles.stepperUnit}>/ 8 glasses</span>
+        </div>
+        <button className={styles.stepperBtn} onClick={inc} type="button" aria-label="Increase" disabled={value >= 12}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 3v8M3 7h8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div className={styles.waterDots}>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className={`${styles.waterDot} ${i < value ? styles.waterDotFull : ''}`} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Toast({ visible, isUpdate }) {
   return (
     <div className={`${styles.toast} ${visible ? styles.toastVisible : ''}`} role="status" aria-live="polite">
@@ -188,6 +229,7 @@ function emptyForm(date) {
     activityType: 'Walk', activityDuration: '', steps: '',
     injectionDate: date, dose: 0.5,
     weight: '', mood: null,
+    water: 0, sideEffects: [],
   }
 }
 
@@ -202,6 +244,8 @@ function formFromEntry(entry, date) {
     dose:             entry.dose             ?? 0.5,
     weight:           entry.weight           ?? '',
     mood:             entry.mood             ?? null,
+    water:            entry.water            ?? 0,
+    sideEffects:      entry.sideEffects      ?? [],
   }
 }
 
@@ -209,6 +253,7 @@ function formFromEntry(entry, date) {
 
 export default function LogToday({ logs, updateLog, onNavigate }) {
   const [selectedDate, setSelectedDate] = useState(todayISO)
+  const tip = useTip('log')
 
   // Form fields
   const [calories, setCalories]               = useState('')
@@ -221,11 +266,14 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
   const [weight, setWeight]                   = useState('')
 
   const [mood, setMood]                       = useState(null)
+  const [water, setWater]                     = useState(0)
+  const [sideEffects, setSideEffects]         = useState([])
 
   // Section open state
   const [activityOpen, setActivityOpen]       = useState(false)
   const [injectionOpen, setInjectionOpen]     = useState(false)
   const [weightOpen, setWeightOpen]           = useState(false)
+  const [waterOpen, setWaterOpen]             = useState(false)
 
   // Validation + feedback
   const [calError, setCalError]               = useState(false)
@@ -248,16 +296,20 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
       setWeight(f.weight)
       // Auto-expand sections that have data
       setMood(f.mood)
+      setWater(f.water)
+      setSideEffects(f.sideEffects)
       setActivityOpen(!!f.activityDuration)
       setInjectionOpen(!!entry.dose)
       setWeightOpen(!!f.weight)
+      setWaterOpen(!!f.water)
     } else {
       const f = emptyForm(selectedDate)
       setCalories(f.calories); setProtein(f.protein)
       setActivityType(f.activityType); setActivityDuration(f.activityDuration); setSteps(f.steps)
       setInjectionDate(f.injectionDate); setDose(f.dose)
       setWeight(f.weight); setMood(null)
-      setActivityOpen(false); setInjectionOpen(false); setWeightOpen(false)
+      setWater(0); setSideEffects([])
+      setActivityOpen(false); setInjectionOpen(false); setWeightOpen(false); setWaterOpen(false)
     }
     setCalError(false)
     setProtError(false)
@@ -274,6 +326,7 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
   const activityBadge  = activityDuration ? `${activityDuration} min` : null
   const injectionBadge = existingEntry?.dose ? `${Number(existingEntry.dose).toFixed(2)}mg` : null
   const weightBadge    = weight ? `${weight} kg` : null
+  const waterBadge     = water > 0 ? `${water} / 8` : null
 
   function handleSave() {
     const missingCal  = !calories
@@ -286,13 +339,15 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
       calories,
       protein,
       mood,
+      sideEffects,
       // Only persist optional sections if they were opened
       activityType:     activityOpen ? activityType     : null,
       activityDuration: activityOpen ? activityDuration : null,
       steps:            activityOpen ? steps            : null,
       injectionDate:    injectionOpen ? injectionDate   : null,
       dose:             injectionOpen ? dose            : null,
-      weight:           weightOpen ? weight : null,
+      weight:           weightOpen ? weight             : null,
+      water:            waterOpen ? water               : 0,
     }
 
     setLastSaveWasUpdate(isExisting)
@@ -319,6 +374,13 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
           </div>
           <div className={styles.headerSpacer} />
         </header>
+
+        {tip.visible && (
+          <TipBanner
+            text="Calories and protein are required. All other sections are optional — tap to open them."
+            onDismiss={tip.dismiss}
+          />
+        )}
 
         {/* Date selector */}
         <DateSelector value={selectedDate} onChange={setSelectedDate} />
@@ -442,6 +504,23 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
             </FieldGroup>
           </CollapsibleSection>
 
+          {/* Water intake */}
+          <CollapsibleSection
+            title="Water"
+            icon={
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1.5C7 1.5 3 5.5 3 8.5a4 4 0 0 0 8 0C11 5.5 7 1.5 7 1.5Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+              </svg>
+            }
+            isOpen={waterOpen}
+            onToggle={() => setWaterOpen(o => !o)}
+            badge={waterBadge}
+          >
+            <FieldGroup label="Glasses today">
+              <WaterStepper value={water} onChange={setWater} />
+            </FieldGroup>
+          </CollapsibleSection>
+
           {/* How are you feeling today */}
           <div className={styles.moodCard}>
             <div className={styles.moodHeader}>
@@ -468,6 +547,28 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
                   <span className={styles.moodLabel}>{m.label}</span>
                 </button>
               ))}
+            </div>
+
+            <div className={styles.sideEffectsHeader}>
+              <span className={styles.sectionTitle} style={{ fontSize: 12 }}>Side effects</span>
+              <span className={styles.moodOptional}>Select all that apply</span>
+            </div>
+            <div className={styles.sideEffectsGrid}>
+              {SIDE_EFFECTS.map(se => {
+                const active = sideEffects.includes(se.value)
+                return (
+                  <button
+                    key={se.value}
+                    type="button"
+                    className={`${styles.seBtn} ${active ? styles.seBtnActive : ''}`}
+                    onClick={() => setSideEffects(prev =>
+                      active ? prev.filter(v => v !== se.value) : [...prev, se.value]
+                    )}
+                  >
+                    {se.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

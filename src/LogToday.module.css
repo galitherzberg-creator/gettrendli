@@ -541,6 +541,67 @@
   font-weight: 600;
 }
 
+/* Water stepper */
+.waterStepperWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.waterDots {
+  display: flex;
+  gap: 5px;
+}
+
+.waterDot {
+  flex: 1;
+  height: 5px;
+  border-radius: 100px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+.waterDotFull { background: var(--text-primary); }
+
+/* Side effects */
+.sideEffectsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sideEffectsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seBtn {
+  padding: 7px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.seBtn:hover { border-color: var(--text-muted); }
+
+.seBtnActive {
+  border-color: var(--text-primary);
+  background: var(--accent-light);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 /* Save area */
 .saveSpacor { height: 100px; }
 

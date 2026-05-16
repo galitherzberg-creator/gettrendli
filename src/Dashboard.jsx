@@ -1,6 +1,8 @@
+import { useState, useRef } from 'react'
 import { mockInsight } from './mockData'
-import { computeWeeklyData, getWeekLabel, todayISO, formatDate } from './logStore'
+import { computeWeeklyData, getWeekLabel, todayISO, formatDate, isoDate } from './logStore'
 import styles from './Dashboard.module.css'
+import TipBanner, { useTip } from './TipBanner'
 
 const MOOD_MAP = {
   great:         { label: 'Great',        icon: '😊' },
@@ -52,6 +54,53 @@ function SnapshotCard({ label, value, sub }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+function computeStreak(logs) {
+  let streak = 0
+  let i = 0
+  while (i < 365) {
+    const entry = logs[isoDate(i)]
+    if (!entry) break
+    const hasData = entry.calories || entry.protein || entry.weight || entry.activityDuration || entry.water > 0
+    if (!hasData) break
+    streak++
+    i++
+  }
+  return streak
+}
+
+function computeSideEffectTrends(logs) {
+  const thisWeek = {}
+  const lastWeek = {}
+  for (let i = 0; i <= 6; i++) {
+    const entry = logs[isoDate(i)]
+    if (entry?.sideEffects?.length) {
+      entry.sideEffects.forEach(se => { thisWeek[se] = (thisWeek[se] || 0) + 1 })
+    }
+  }
+  for (let i = 7; i <= 13; i++) {
+    const entry = logs[isoDate(i)]
+    if (entry?.sideEffects?.length) {
+      entry.sideEffects.forEach(se => { lastWeek[se] = (lastWeek[se] || 0) + 1 })
+    }
+  }
+  const all = new Set([...Object.keys(thisWeek), ...Object.keys(lastWeek)])
+  if (!all.size) return []
+  return Array.from(all).map(se => ({
+    key: se,
+    label: se.charAt(0).toUpperCase() + se.slice(1).replace('-', '. '),
+    thisWeek: thisWeek[se] || 0,
+    lastWeek: lastWeek[se] || 0,
+  })).sort((a, b) => b.thisWeek - a.thisWeek)
+}
+
+function computeDoseHistory(logs) {
+  return Object.entries(logs)
+    .filter(([, v]) => v.dose && v.injectionDate)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, 6)
+    .map(([, v]) => ({ date: v.injectionDate, dose: v.dose }))
+}
+
 function computeBMI(weightKg, heightCm) {
   if (!weightKg || !heightCm) return null
   const m = heightCm / 100
@@ -73,6 +122,53 @@ function computeNextInjection(logs, userSettings) {
   const today = new Date(todayISO + 'T12:00:00')
   const daysUntil = Math.round((next - today) / 86400000)
   return { daysUntil, nextDate: next.toISOString().split('T')[0] }
+}
+
+function computeWeeklySummary(logs, goalType, proteinGoal) {
+  // This week (last 7 days)
+  const thisWeek = []
+  for (let i = 0; i <= 6; i++) {
+    const d = isoDate(i)
+    if (logs[d]) thisWeek.push({ ...logs[d], date: d })
+  }
+  // Last week (7–13 days ago) — for weight comparison
+  const lastWeekWeights = []
+  for (let i = 7; i <= 13; i++) {
+    const d = isoDate(i)
+    if (logs[d]?.weight) lastWeekWeights.push(parseFloat(logs[d].weight))
+  }
+  const thisWeekWeights = thisWeek.filter(e => e.weight).map(e => parseFloat(e.weight))
+  const weightNow  = thisWeekWeights.length ? thisWeekWeights[thisWeekWeights.length - 1] : null
+  const weightThen = lastWeekWeights.length ? lastWeekWeights[lastWeekWeights.length - 1] : null
+  const weightDelta = weightNow && weightThen
+    ? parseFloat((weightNow - weightThen).toFixed(1))
+    : null
+
+  const daysLogged      = thisWeek.filter(e => e.calories || e.protein || e.weight || e.activityDuration).length
+  const activitySessions = thisWeek.filter(e => e.activityDuration).length
+  const proteinEntries  = thisWeek.filter(e => e.protein)
+  const avgProtein      = proteinEntries.length
+    ? Math.round(proteinEntries.reduce((s, e) => s + parseFloat(e.protein), 0) / proteinEntries.length)
+    : null
+  const proteinGoalDays = proteinGoal && proteinEntries.length
+    ? proteinEntries.filter(e => parseFloat(e.protein) >= proteinGoal).length
+    : null
+
+  // Generate headline sentence
+  const parts = []
+  if (weightDelta !== null) {
+    const direction = goalType === 'gain'
+      ? (weightDelta > 0 ? `gained ${weightDelta} kg` : weightDelta < 0 ? `lost ${Math.abs(weightDelta)} kg` : 'maintained your weight')
+      : (weightDelta < 0 ? `lost ${Math.abs(weightDelta)} kg` : weightDelta > 0 ? `gained ${weightDelta} kg` : 'maintained your weight')
+    parts.push(direction)
+  }
+  if (daysLogged > 0) parts.push(`logged ${daysLogged} day${daysLogged !== 1 ? 's' : ''}`)
+  if (avgProtein)      parts.push(`averaged ${avgProtein}g protein`)
+  const headline = parts.length
+    ? `You ${parts.join(', ')}.`
+    : 'Keep logging to see your weekly recap.'
+
+  return { weightDelta, daysLogged, activitySessions, avgProtein, proteinGoalDays, headline }
 }
 
 function computeProjection(logs, goalWeight, goalType = 'lose') {
@@ -99,8 +195,35 @@ function computeProjection(logs, goalWeight, goalType = 'lose') {
   return target.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
+const PULL_THRESHOLD = 62
+
 export default function Dashboard({ logs, userSettings, onNavigate }) {
   const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null } = userSettings
+
+  // Pull-to-refresh
+  const [pullY, setPullY]         = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const touchStartY               = useRef(0)
+  const tip                       = useTip('dashboard')
+
+  function onTouchStart(e) {
+    if (window.scrollY <= 0) touchStartY.current = e.touches[0].clientY
+  }
+  function onTouchMove(e) {
+    if (!touchStartY.current) return
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0) setPullY(Math.min(dy * 0.42, PULL_THRESHOLD))
+  }
+  function onTouchEnd() {
+    if (pullY >= PULL_THRESHOLD * 0.85) {
+      setRefreshing(true)
+      setPullY(PULL_THRESHOLD)
+      setTimeout(() => { setRefreshing(false); setPullY(0); touchStartY.current = 0 }, 900)
+    } else {
+      setPullY(0)
+      touchStartY.current = 0
+    }
+  }
   const { text: insightText } = mockInsight
   const weekLabel = getWeekLabel()
 
@@ -137,20 +260,52 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
     ? Math.min(100, Math.round((todayLog.protein / proteinGoal) * 100))
     : null
 
-  const bmi           = computeBMI(latestWeight, height)
-  const projectedDate = computeProjection(logs, goalWeight, goalType)
-  const nextInj       = computeNextInjection(logs, userSettings)
+  const bmi             = computeBMI(latestWeight, height)
+  const projectedDate   = computeProjection(logs, goalWeight, goalType)
+  const nextInj         = computeNextInjection(logs, userSettings)
+  const weeklySummary   = computeWeeklySummary(logs, goalType, proteinGoal)
+  const streak          = computeStreak(logs)
+  const sideEffects     = computeSideEffectTrends(logs)
+  const doseHistory     = computeDoseHistory(logs)
+  const todayWater      = todayLog.water || 0
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+
+      {/* Pull-to-refresh indicator */}
+      {(pullY > 0 || refreshing) && (
+        <div className={styles.pullWrap} style={{ height: refreshing ? PULL_THRESHOLD : pullY, opacity: refreshing ? 1 : pullY / PULL_THRESHOLD }}>
+          <svg className={`${styles.pullIcon} ${refreshing ? styles.pullSpin : ''}`} width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M15 9A6 6 0 1 1 9 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+            <path d="M9 1l2.5 2L9 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {refreshing && <span className={styles.pullText}>Updated</span>}
+        </div>
+      )}
+
       <div className={styles.page}>
+
+        {/* ── Tip banner ──────────────────────────────────────────── */}
+        {tip.visible && (
+          <TipBanner
+            text="Tap + to log today's weight, nutrition, and mood. The more you log, the smarter your insights get."
+            onDismiss={tip.dismiss}
+          />
+        )}
 
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={styles.header}>
           <div className={styles.headerTop}>
             <div>
               <p className={styles.greeting}>Hey, {name}</p>
-              <p className={styles.weekLabel}>Week of {weekLabel}</p>
+              <div className={styles.headerMeta}>
+                <p className={styles.weekLabel}>Week of {weekLabel}</p>
+                {streak > 0 && (
+                  <span className={styles.streakBadge}>
+                    {streak} day streak
+                  </span>
+                )}
+              </div>
             </div>
             <button className={styles.avatarBtn} aria-label="Settings">{name[0]}</button>
           </div>
@@ -246,6 +401,18 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
               />
             </div>
 
+            {todayWater > 0 && (
+              <div className={styles.waterRow}>
+                <span className={styles.waterRowLabel}>Water today</span>
+                <div className={styles.waterDots}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className={`${styles.waterDot} ${i < todayWater ? styles.waterDotFull : ''}`} />
+                  ))}
+                </div>
+                <span className={styles.waterRowCount}>{todayWater}/8</span>
+              </div>
+            )}
+
             {proteinPct !== null && (
               <div className={styles.proteinGoalWrap}>
                 <div className={styles.proteinGoalBar}>
@@ -276,6 +443,102 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
             </button>
           </div>
         </section>
+
+        {/* ── Weekly summary ───────────────────────────────────────── */}
+        <section className={styles.section}>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryHeader}>
+              <span className={styles.summaryLabel}>This week</span>
+              {weeklySummary.weightDelta !== null && (
+                <span className={`${styles.summaryDelta} ${
+                  (goalType === 'gain' ? weeklySummary.weightDelta > 0 : weeklySummary.weightDelta < 0)
+                    ? styles.summaryDeltaGood
+                    : weeklySummary.weightDelta === 0
+                    ? styles.summaryDeltaNeutral
+                    : styles.summaryDeltaBad
+                }`}>
+                  {weeklySummary.weightDelta > 0 ? '+' : ''}{weeklySummary.weightDelta} kg
+                </span>
+              )}
+            </div>
+            <p className={styles.summaryHeadline}>{weeklySummary.headline}</p>
+            <div className={styles.summaryStats}>
+              {weeklySummary.daysLogged > 0 && (
+                <div className={styles.summaryStat}>
+                  <span className={styles.summaryStatValue}>{weeklySummary.daysLogged}<span className={styles.summaryStatSub}>/7</span></span>
+                  <span className={styles.summaryStatLabel}>Days logged</span>
+                </div>
+              )}
+              {weeklySummary.activitySessions > 0 && (
+                <div className={styles.summaryStat}>
+                  <span className={styles.summaryStatValue}>{weeklySummary.activitySessions}</span>
+                  <span className={styles.summaryStatLabel}>Workouts</span>
+                </div>
+              )}
+              {weeklySummary.avgProtein && (
+                <div className={styles.summaryStat}>
+                  <span className={styles.summaryStatValue}>{weeklySummary.avgProtein}<span className={styles.summaryStatSub}>g</span></span>
+                  <span className={styles.summaryStatLabel}>Avg protein</span>
+                </div>
+              )}
+              {weeklySummary.proteinGoalDays !== null && (
+                <div className={styles.summaryStat}>
+                  <span className={styles.summaryStatValue}>{weeklySummary.proteinGoalDays}<span className={styles.summaryStatSub}>×</span></span>
+                  <span className={styles.summaryStatLabel}>Goal hit</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Side effects ─────────────────────────────────────────── */}
+        {sideEffects.length > 0 && (
+          <section className={styles.section}>
+            <div className={styles.sideEffectsCard}>
+              <h2 className={styles.sectionTitle} style={{ marginBottom: 12 }}>Side effects this week</h2>
+              <div className={styles.sideEffectsList}>
+                {sideEffects.map(se => {
+                  const better = se.thisWeek < se.lastWeek
+                  const worse  = se.thisWeek > se.lastWeek
+                  return (
+                    <div key={se.key} className={styles.sideEffectRow}>
+                      <span className={styles.sideEffectName}>{se.label}</span>
+                      <div className={styles.sideEffectBar}>
+                        <div
+                          className={styles.sideEffectFill}
+                          style={{ width: `${Math.min(100, se.thisWeek / 7 * 100)}%` }}
+                        />
+                      </div>
+                      <span className={styles.sideEffectCount}>{se.thisWeek}×</span>
+                      {se.lastWeek > 0 && (
+                        <span className={`${styles.sideEffectTrend} ${better ? styles.trendBetter : worse ? styles.trendWorse : styles.trendSame}`}>
+                          {better ? '↓' : worse ? '↑' : '→'}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className={styles.sideEffectNote}>Arrows compare to last week. Log side effects in the daily log.</p>
+            </div>
+          </section>
+        )}
+
+        {/* ── Dose history ─────────────────────────────────────────── */}
+        {doseHistory.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle} style={{ marginBottom: 10 }}>Dose history</h2>
+            <div className={styles.doseHistoryCard}>
+              {doseHistory.map((entry, i) => (
+                <div key={i} className={styles.doseRow}>
+                  <div className={styles.doseDot} />
+                  <span className={styles.doseDate}>{formatDate(entry.date, { month: 'short', day: 'numeric' })}</span>
+                  <span className={styles.doseMg}>{Number(entry.dose).toFixed(2)} mg</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Weekly average ── secondary, below today ─────────────── */}
         <section className={styles.section}>

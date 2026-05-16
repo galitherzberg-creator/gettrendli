@@ -1,3 +1,32 @@
+/* Pull-to-refresh */
+.pullWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  overflow: hidden;
+  transition: height 0.25s ease, opacity 0.2s ease;
+  background: var(--bg);
+}
+
+.pullIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.pullSpin { animation: spin 0.7s linear infinite; }
+
+.pullText {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* Shell + page layout */
 .shell {
   min-height: 100dvh;
@@ -177,6 +206,176 @@
 .goalPct {
   font-weight: 700;
   color: rgba(255,255,255,0.85);
+}
+
+/* Header meta row (week label + streak) */
+.headerMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.streakBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--accent-light);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Water row (Today card) */
+.waterRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.waterRowLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.waterDots {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+
+.waterDot {
+  flex: 1;
+  height: 4px;
+  border-radius: 100px;
+  background: var(--border);
+}
+
+.waterDotFull { background: var(--text-primary); }
+
+.waterRowCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Side effects card */
+.sideEffectsCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.sideEffectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sideEffectRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sideEffectName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  width: 82px;
+  flex-shrink: 0;
+}
+
+.sideEffectBar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.sideEffectFill {
+  height: 100%;
+  background: var(--text-primary);
+  border-radius: 100px;
+  transition: width 0.4s ease;
+}
+
+.sideEffectCount {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sideEffectTrend {
+  font-size: 12px;
+  font-weight: 700;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.trendBetter { color: var(--green); }
+.trendWorse  { color: var(--red); }
+.trendSame   { color: var(--text-muted); }
+
+.sideEffectNote {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin: 0;
+}
+
+/* Dose history */
+.doseHistoryCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 6px 16px;
+}
+
+.doseRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.doseRow:last-child { border-bottom: none; }
+
+.doseDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.doseDate {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.doseMg {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
 }
 
 /* Sections */
@@ -449,6 +648,93 @@
 
 .logBtn:hover { opacity: 0.85; }
 .logBtn:active { transform: scale(0.98); }
+
+/* Weekly summary card */
+.summaryCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 16px 14px;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.summaryDelta {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 100px;
+}
+
+.summaryDeltaGood    { background: var(--green-light); color: var(--green); }
+.summaryDeltaBad     { background: var(--red-light);   color: var(--red);   }
+.summaryDeltaNeutral { background: var(--surface-2);   color: var(--text-muted); }
+
+.summaryHeadline {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.summaryStats {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.summaryStat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 12px;
+}
+
+.summaryStat + .summaryStat {
+  padding-left: 12px;
+  padding-right: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.summaryStat:last-child { padding-right: 0; }
+
+.summaryStatValue {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.summaryStatSub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.summaryStatLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
 
 /* Weekly average header */
 .weeklyHeader {

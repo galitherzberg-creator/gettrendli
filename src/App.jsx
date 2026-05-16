@@ -59,7 +59,7 @@ export default function App() {
 
   const screenEl = (() => {
     if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} onNavigate={setScreen} />
-    if (screen === 'insights')     return <Insights onNavigate={setScreen} />
+    if (screen === 'insights')     return <Insights logs={logs} onNavigate={setScreen} />
     if (screen === 'charts')       return <Suspense fallback={null}><Charts theme={theme} onNavigate={setScreen} /></Suspense>
     if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} theme={theme} onThemeChange={setTheme} onNavigate={setScreen} />
     if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} onNavigate={setScreen} />

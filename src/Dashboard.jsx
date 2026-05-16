@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react'
-import { mockInsight } from './mockData'
 import { computeWeeklyData, getWeekLabel, todayISO, formatDate, isoDate } from './logStore'
 import styles from './Dashboard.module.css'
 import TipBanner, { useTip } from './TipBanner'
@@ -99,6 +98,37 @@ function computeDoseHistory(logs) {
     .sort(([a], [b]) => b.localeCompare(a))
     .slice(0, 6)
     .map(([, v]) => ({ date: v.injectionDate, dose: v.dose }))
+}
+
+function computeInsight(logs, goalType, proteinGoal) {
+  const hasData = Object.values(logs).some(e => e.calories || e.protein || e.weight)
+  if (!hasData) return "Start logging daily to unlock personalised insights based on your own data."
+
+  const thisWeekProt = []
+  for (let i = 0; i <= 6; i++) {
+    const p = logs[isoDate(i)]?.protein
+    if (p) thisWeekProt.push(parseFloat(p))
+  }
+  const avgProt = thisWeekProt.length
+    ? Math.round(thisWeekProt.reduce((a, b) => a + b, 0) / thisWeekProt.length)
+    : null
+
+  if (avgProt && proteinGoal) {
+    if (avgProt >= proteinGoal * 0.9)
+      return `Protein is on track this week — avg ${avgProt}g vs your ${proteinGoal}g goal. Keep it up to support your ${goalType === 'gain' ? 'muscle building' : 'muscle preservation'} progress.`
+    if (avgProt < proteinGoal * 0.75)
+      return `Protein is below target this week (avg ${avgProt}g vs ${proteinGoal}g goal). Try adding a high-protein meal or snack to close the gap.`
+  }
+
+  let streak = 0
+  for (let i = 0; i < 365; i++) {
+    const e = logs[isoDate(i)]
+    if (!e || (!e.calories && !e.protein && !e.weight)) break
+    streak++
+  }
+  if (streak >= 5) return `You're on a ${streak}-day logging streak — great consistency. The more complete your data, the more accurate your weekly trends become.`
+
+  return "Keep logging consistently — the more data you add, the more accurate your insights and projections become."
 }
 
 function computeBMI(weightKg, heightCm) {
@@ -224,7 +254,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
       touchStartY.current = 0
     }
   }
-  const { text: insightText } = mockInsight
+  const insightText = computeInsight(logs, goalType, proteinGoal)
   const weekLabel = getWeekLabel()
 
   const {

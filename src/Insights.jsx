@@ -21,20 +21,9 @@ const activityIcon = (
     <path d="M2 10l3-4 3 3 3-5 3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
-const calorieIcon = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M8 2v3M5 4.5C3.5 6 3 8 4 10c.7 1.4 2 2.5 4 2.5s3.3-1.1 4-2.5c1-2 .5-4-1-5.5C10 6 9 7.5 8 7.5S6 6 5 4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
 const weightIcon = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path d="M2 12h12M8 4v5M5.5 6.5 8 4l2.5 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const restIcon = (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M3 8.5A5 5 0 0 1 11.5 3a5 5 0 0 0-5 8.5H3v-3Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-    <path d="M6.5 11.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
   </svg>
 )
 const streakIcon = (
@@ -49,65 +38,108 @@ const injectionIcon = (
     <path d="M7 6l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
   </svg>
 )
+const waterIcon = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M8 2C8 2 4 6.5 4 9.5a4 4 0 0 0 8 0C12 6.5 8 2 8 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+  </svg>
+)
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const mockWeeklyRows = [
-  { week: 'Mar 17–23', calories: 1880, protein: 135, activityDays: 2, activityMin: 80,  dose: '0.5mg', weightChange: -0.2 },
-  { week: 'Mar 24–30', calories: 1950, protein: 128, activityDays: 3, activityMin: 120, dose: '0.5mg', weightChange: +0.1 },
-  { week: 'Mar 31–Apr 6', calories: 1910, protein: 132, activityDays: 2, activityMin: 90,  dose: '0.5mg', weightChange: -0.1 },
-  { week: 'Apr 7–13',  calories: 1820, protein: 141, activityDays: 3, activityMin: 145, dose: '0.5mg', weightChange: -0.3 },
-  { week: 'Apr 14–20', calories: 1808, protein: 142, activityDays: 4, activityMin: 175, dose: '0.5mg', weightChange: -0.4, best: true },
-]
+// ── Insight tip cards (generic, always relevant) ──────────────────────────────
 
 const insightCards = [
   {
     icon: proteinIcon,
     title: 'Higher protein weeks look different',
-    body: 'Based on your data, weeks where protein averaged 140g+ tend to align with better weight trends. It\'s worth noting, though this may reflect other habits happening at the same time.',
+    body: "Weeks where protein averages higher tend to align with better weight trends — whether you're losing fat or building muscle. It's worth tracking consistently.",
   },
   {
     icon: consistencyIcon,
-    title: 'Logging more days may help',
-    body: 'Your more consistent weeks — 4 or more days logged — tend to show slightly lower calorie averages. Whether that reflects behaviour or just better tracking is hard to say.',
+    title: 'Logging more days helps accuracy',
+    body: 'The more days you log, the more reliable your weekly averages become. Even partial logs — just weight or protein — add useful signal.',
   },
   {
     icon: activityIcon,
     title: 'Short sessions tend to add up',
-    body: 'Even 30-minute sessions accumulate to 150+ minutes per week in your data. Your more active weeks average around 160 min, which may be associated with steadier trends.',
-  },
-  {
-    icon: calorieIcon,
-    title: 'Around 1,800 kcal appears often',
-    body: 'Weeks averaging 1,750–1,850 kcal tend to show up alongside your more stable weeks — based on your data so far. That said, individual variation matters a lot.',
+    body: 'Even 30-minute sessions accumulate to 150+ minutes per week. Consistency beats intensity for long-term trends.',
   },
   {
     icon: weightIcon,
     title: 'Day-to-day weight varies naturally',
-    body: 'Your daily weight can shift up to 1.5 kg based on water, sleep, and meals. The weekly average may give a more reliable picture than any single reading.',
-  },
-  {
-    icon: restIcon,
-    title: 'Rest days don\'t seem to slow things down',
-    body: 'Based on your logged weeks, having 2–3 rest days doesn\'t appear to be associated with slower progress. How your body responds to rest is individual, though.',
+    body: 'Your daily weight can shift up to 1.5 kg based on water, sleep, and meals. The weekly average gives a more reliable picture than any single reading.',
   },
   {
     icon: streakIcon,
-    title: 'Longer logging streaks look more consistent',
-    body: 'Your weeks with 5+ days logged tend to show more stable averages — which may simply mean the data is more complete rather than reflecting a behaviour change.',
+    title: 'Longer logging streaks = better data',
+    body: 'Weeks with 5+ days logged show more stable averages — which may simply mean the data is more complete rather than reflecting a behaviour change.',
   },
   {
     icon: injectionIcon,
-    title: 'A subtle pattern around dose days',
-    body: 'Your calorie intake on dose days and the day after tends to run slightly lower than your weekly average — about 80 kcal. This is a small signal in your data, not a definitive finding.',
+    title: 'A pattern around dose days',
+    body: 'Calorie intake on dose days and the day after often runs slightly lower than your weekly average. This is a common pattern reported by GLP-1 users.',
+  },
+  {
+    icon: waterIcon,
+    title: 'Hydration matters on GLP-1',
+    body: 'GLP-1 medications can reduce thirst cues. Tracking water intake helps ensure you stay consistently hydrated, especially on injection days.',
   },
 ]
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Compute weekly rows from real logs ────────────────────────────────────────
 
-function Num({ children }) {
-  return <span className={styles.highlight}>{children}</span>
+function computeInsightWeeks(logs) {
+  const weeks = {}
+  Object.entries(logs).forEach(([dateStr, entry]) => {
+    if (!entry.calories && !entry.protein && !entry.weight && !entry.activityDuration) return
+    const d = new Date(dateStr + 'T12:00:00')
+    const day = d.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    const monday = new Date(d)
+    monday.setDate(d.getDate() + diff)
+    const weekKey = monday.toISOString().split('T')[0]
+    if (!weeks[weekKey]) weeks[weekKey] = []
+    weeks[weekKey].push({ dateStr, ...entry })
+  })
+
+  const result = Object.entries(weeks)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekKey, entries]) => {
+      const start = new Date(weekKey + 'T12:00:00')
+      const end   = new Date(start)
+      end.setDate(start.getDate() + 6)
+      const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const label = `${fmt(start)}–${fmt(end)}`
+
+      const withCal      = entries.filter(e => e.calories)
+      const withProt     = entries.filter(e => e.protein)
+      const withActivity = entries.filter(e => e.activityDuration)
+      const withDose     = entries.filter(e => e.dose)
+      const weightEntries = entries.filter(e => e.weight).sort((a, b) => a.dateStr.localeCompare(b.dateStr))
+
+      const avgCalories  = withCal.length  ? Math.round(withCal.reduce((s, e) => s + +e.calories, 0) / withCal.length)  : null
+      const avgProtein   = withProt.length ? Math.round(withProt.reduce((s, e) => s + +e.protein, 0) / withProt.length) : null
+      const activityDays = withActivity.length
+      const activityMin  = withActivity.reduce((s, e) => s + +e.activityDuration, 0)
+      const latestDose   = withDose.length ? withDose[withDose.length - 1].dose : null
+      const weightChange = weightEntries.length >= 2
+        ? parseFloat((parseFloat(weightEntries[weightEntries.length - 1].weight) - parseFloat(weightEntries[0].weight)).toFixed(1))
+        : null
+
+      return { week: label, calories: avgCalories, protein: avgProtein, activityDays, activityMin, dose: latestDose ? `${latestDose}mg` : null, weightChange }
+    })
+
+  // Mark best week (highest protein)
+  if (result.length > 1) {
+    const withProt = result.filter(w => w.protein)
+    if (withProt.length) {
+      const best = withProt.reduce((a, b) => b.protein > a.protein ? b : a)
+      best.best = true
+    }
+  }
+
+  return result.slice(-4)
 }
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function InsightCard({ icon, title, body }) {
   return (
@@ -122,7 +154,8 @@ function InsightCard({ icon, title, body }) {
 }
 
 function WeightDelta({ value }) {
-  if (value === 0) return <span className={styles.deltaZero}>—</span>
+  if (value === null || value === undefined) return <span className={styles.deltaZero}>—</span>
+  if (value === 0) return <span className={styles.deltaZero}>±0</span>
   const neg = value < 0
   return (
     <span className={neg ? styles.deltaNeg : styles.deltaPos}>
@@ -131,9 +164,22 @@ function WeightDelta({ value }) {
   )
 }
 
+function EmptyState() {
+  return (
+    <div className={styles.emptyState}>
+      <p className={styles.emptyTitle}>No data yet</p>
+      <p className={styles.emptyText}>Log at least 2 weeks of data to see your week-by-week breakdown and pattern summary here.</p>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function Insights({ onNavigate }) {
+export default function Insights({ logs = {}, onNavigate }) {
+  const weeklyRows = computeInsightWeeks(logs)
+  const hasData    = weeklyRows.length > 0
+  const best       = weeklyRows.find(w => w.best)
+
   return (
     <div className={styles.shell}>
       <div className={styles.page}>
@@ -141,7 +187,9 @@ export default function Insights({ onNavigate }) {
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={styles.header}>
           <h1 className={styles.headerTitle}>Insights</h1>
-          <p className={styles.headerSub}>Based on your last 5 weeks</p>
+          <p className={styles.headerSub}>
+            {hasData ? `Based on your last ${weeklyRows.length} week${weeklyRows.length !== 1 ? 's' : ''}` : 'Keep logging to unlock insights'}
+          </p>
         </header>
 
         <div className={styles.scrollContent}>
@@ -149,17 +197,20 @@ export default function Insights({ onNavigate }) {
           {/* ── Pattern summary ──────────────────────────────────── */}
           <section className={styles.summaryCard}>
             <p className={styles.summaryEyebrow}>Your pattern</p>
-            <p className={styles.summaryText}>
-              On your best weeks, protein averaged <Num>142g</Num> and
-              calories stayed around <Num>1,808 kcal</Num> — with{' '}
-              <Num>4 active days</Num> and a weight drop of <Num>0.4 kg</Num>.
-              That combination seems to be your sweet spot.
-            </p>
+            {hasData && best ? (
+              <p className={styles.summaryText}>
+                On your best week ({best.week}){best.protein ? <>, protein averaged <span className={styles.highlight}>{best.protein}g</span></> : null}{best.calories ? <> and calories stayed around <span className={styles.highlight}>{best.calories.toLocaleString()} kcal</span></> : null}{best.activityDays > 0 ? <> with <span className={styles.highlight}>{best.activityDays} active day{best.activityDays !== 1 ? 's' : ''}</span></> : null}{best.weightChange !== null ? <> and a weight change of <span className={styles.highlight}>{best.weightChange > 0 ? '+' : ''}{best.weightChange} kg</span></> : null}.
+              </p>
+            ) : (
+              <p className={styles.summaryText}>
+                Log consistently for a few weeks and your personal pattern will appear here — showing what your best weeks look like in numbers.
+              </p>
+            )}
           </section>
 
           {/* ── Insight cards ─────────────────────────────────────── */}
           <section>
-            <h2 className={styles.sectionTitle}>What the data shows</h2>
+            <h2 className={styles.sectionTitle}>What to know</h2>
             <div className={styles.cardList}>
               {insightCards.map(card => (
                 <InsightCard key={card.title} {...card} />
@@ -170,42 +221,56 @@ export default function Insights({ onNavigate }) {
           {/* ── Weekly comparison ─────────────────────────────────── */}
           <section>
             <h2 className={styles.sectionTitle}>Week-by-week</h2>
-            <div className={styles.weekCards}>
-              {mockWeeklyRows.slice(-4).map(row => (
-                <div key={row.week} className={`${styles.weekCard} ${row.best ? styles.weekCardBest : ''}`}>
-                  <div className={styles.weekCardHeader}>
-                    <span className={styles.weekCardLabel}>{row.week}</span>
-                    {row.best && <span className={styles.bestPill}>best week</span>}
+            {hasData ? (
+              <div className={styles.weekCards}>
+                {weeklyRows.map(row => (
+                  <div key={row.week} className={`${styles.weekCard} ${row.best ? styles.weekCardBest : ''}`}>
+                    <div className={styles.weekCardHeader}>
+                      <span className={styles.weekCardLabel}>{row.week}</span>
+                      {row.best && <span className={styles.bestPill}>best week</span>}
+                    </div>
+                    <div className={styles.weekCardGrid}>
+                      {row.calories && (
+                        <div className={styles.weekStat}>
+                          <span className={styles.weekStatLabel}>Calories</span>
+                          <span className={styles.weekStatValue}>{row.calories.toLocaleString()}</span>
+                          <span className={styles.weekStatUnit}>kcal avg</span>
+                        </div>
+                      )}
+                      {row.protein && (
+                        <div className={styles.weekStat}>
+                          <span className={styles.weekStatLabel}>Protein</span>
+                          <span className={styles.weekStatValue}>{row.protein}g</span>
+                          <span className={styles.weekStatUnit}>per day</span>
+                        </div>
+                      )}
+                      {row.activityDays > 0 && (
+                        <div className={styles.weekStat}>
+                          <span className={styles.weekStatLabel}>Activity</span>
+                          <span className={styles.weekStatValue}>{row.activityMin} min</span>
+                          <span className={styles.weekStatUnit}>{row.activityDays} days</span>
+                        </div>
+                      )}
+                      {row.dose && (
+                        <div className={styles.weekStat}>
+                          <span className={styles.weekStatLabel}>Dose</span>
+                          <span className={styles.weekStatValue}>{row.dose}</span>
+                          <span className={styles.weekStatUnit}>this week</span>
+                        </div>
+                      )}
+                      {row.weightChange !== null && (
+                        <div className={`${styles.weekStat} ${styles.weekStatFull}`}>
+                          <span className={styles.weekStatLabel}>Weight change</span>
+                          <span className={styles.weekStatValue}><WeightDelta value={row.weightChange} /> kg</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className={styles.weekCardGrid}>
-                    <div className={styles.weekStat}>
-                      <span className={styles.weekStatLabel}>Calories</span>
-                      <span className={styles.weekStatValue}>{row.calories.toLocaleString()}</span>
-                      <span className={styles.weekStatUnit}>kcal avg</span>
-                    </div>
-                    <div className={styles.weekStat}>
-                      <span className={styles.weekStatLabel}>Protein</span>
-                      <span className={styles.weekStatValue}>{row.protein}g</span>
-                      <span className={styles.weekStatUnit}>per day</span>
-                    </div>
-                    <div className={styles.weekStat}>
-                      <span className={styles.weekStatLabel}>Activity</span>
-                      <span className={styles.weekStatValue}>{row.activityMin} min</span>
-                      <span className={styles.weekStatUnit}>{row.activityDays} days</span>
-                    </div>
-                    <div className={styles.weekStat}>
-                      <span className={styles.weekStatLabel}>Dose</span>
-                      <span className={styles.weekStatValue}>{row.dose}</span>
-                      <span className={styles.weekStatUnit}>this week</span>
-                    </div>
-                    <div className={`${styles.weekStat} ${styles.weekStatFull}`}>
-                      <span className={styles.weekStatLabel}>Weight change</span>
-                      <span className={styles.weekStatValue}><WeightDelta value={row.weightChange} /> kg</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState />
+            )}
           </section>
 
           {/* ── Disclaimer ────────────────────────────────────────── */}

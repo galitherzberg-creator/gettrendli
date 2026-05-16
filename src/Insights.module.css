@@ -232,6 +232,28 @@
 .deltaPos  { color: var(--red);   font-weight: 600; }
 .deltaZero { color: var(--text-muted); }
 
+/* Empty state */
+.emptyState {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.emptyText {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
 /* Disclaimer */
 .disclaimer {
   font-size: 11px;

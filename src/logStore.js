@@ -13,18 +13,6 @@ export function formatDate(iso, opts = { weekday: 'short', month: 'short', day: 
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', opts)
 }
 
-// Pre-populated mock data — includes sparse older weight entries for trend calculation
-export const initialLogs = {
-  [isoDate(21)]: { calories: null,   protein: null,   activityType: null,   activityDuration: null, steps: null,   weight: '85.5', dose: null,  injectionDate: null },
-  [isoDate(14)]: { calories: null,   protein: null,   activityType: null,   activityDuration: null, steps: null,   weight: '84.8', dose: null,  injectionDate: null },
-  [isoDate(6)]:  { calories: '1920', protein: '138', activityType: 'Walk', activityDuration: '50', steps: '7200', weight: '84.2', dose: null,  injectionDate: null },
-  [isoDate(5)]: { calories: '1750', protein: '145', activityType: 'Gym',  activityDuration: '55', steps: null,   weight: null,   dose: null,  injectionDate: null },
-  [isoDate(4)]: { calories: '1830', protein: '140', activityType: null,   activityDuration: null, steps: null,   weight: null,   dose: null,  injectionDate: null },
-  [isoDate(3)]: { calories: '1880', protein: '148', activityType: 'Run',  activityDuration: '30', steps: '5000', weight: null,   dose: 5.0,   injectionDate: isoDate(3) },
-  [isoDate(2)]: { calories: '1800', protein: '142', activityType: 'Walk', activityDuration: '40', steps: null,   weight: null,   dose: null,  injectionDate: null },
-  [isoDate(1)]: { calories: '1760', protein: '139', activityType: null,   activityDuration: null, steps: null,   weight: '83.4', dose: null,  injectionDate: null },
-}
-
 // Computes the weekly snapshot from logs (last 7 days)
 export function computeWeeklyData(logs) {
   const entries = []

@@ -24,6 +24,8 @@ const defaultSettings = {
   height: 165,
   injectionInterval: 7,
   lastInjectionDate: null,
+  goalType: 'lose',      // 'lose' | 'gain'
+  proteinGoal: null,     // optional grams/day
 }
 
 export default function App() {

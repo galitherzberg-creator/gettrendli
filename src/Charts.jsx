@@ -98,11 +98,15 @@ function ChartCard({ title, description, children }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Charts({ theme, onNavigate }) {
-  const isDark   = theme === 'dark'
-  const gridColor   = isDark ? '#2C2C2C' : '#E8E7E3'
-  const cursorFill  = isDark ? '#1C1C1C' : '#F2F1EE'
-  const cursorStroke = isDark ? '#2C2C2C' : '#E8E7E3'
-  const gridProps   = { stroke: gridColor, strokeDasharray: '3 3' }
+  const isDark      = theme === 'dark'
+  const weightColor  = isDark ? '#E0E0E0' : '#0F0F0F'
+  const barFill      = isDark ? '#2A2A2A' : '#EAEAE7'
+  const barStroke    = isDark ? '#666666' : '#0F0F0F'
+  const doseColor    = isDark ? '#666666' : '#909090'
+  const gridColor    = isDark ? '#252525' : '#E8E8E4'
+  const cursorFill   = isDark ? '#1C1C1C' : '#F3F3F1'
+  const cursorStroke = isDark ? '#252525' : '#E8E8E4'
+  const gridProps    = { stroke: gridColor, strokeDasharray: '3 3' }
 
   return (
     <div className={styles.shell}>
@@ -125,8 +129,8 @@ export default function Charts({ theme, onNavigate }) {
               <ComposedChart data={weeklyData} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#2D5BE3" stopOpacity={0.12} />
-                    <stop offset="100%" stopColor="#2D5BE3" stopOpacity={0}    />
+                    <stop offset="0%"   stopColor={weightColor} stopOpacity={0.08} />
+                    <stop offset="100%" stopColor={weightColor} stopOpacity={0}    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} {...gridProps} />
@@ -144,28 +148,28 @@ export default function Charts({ theme, onNavigate }) {
                 <Area
                   type="monotone"
                   dataKey="weight"
-                  stroke="#2D5BE3"
+                  stroke={weightColor}
                   strokeWidth={2}
                   fill="url(#weightGrad)"
-                  dot={{ r: 3, fill: '#2D5BE3', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#2D5BE3', strokeWidth: 2, stroke: '#fff' }}
+                  dot={{ r: 3, fill: weightColor, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: weightColor, strokeWidth: 2, stroke: isDark ? '#0A0A0A' : '#fff' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="weightAvg"
-                  stroke="#2D5BE3"
+                  stroke={weightColor}
                   strokeWidth={1.5}
                   strokeDasharray="4 3"
-                  strokeOpacity={0.5}
+                  strokeOpacity={0.4}
                   dot={false}
                   activeDot={false}
                 />
               </ComposedChart>
             </ResponsiveContainer>
             <div className={styles.legend}>
-              <span className={styles.legendLine} style={{ background: '#2D5BE3' }} />
+              <span className={styles.legendLine} />
               <span className={styles.legendText}>Weekly weight</span>
-              <span className={styles.legendDash} style={{ backgroundImage: 'repeating-linear-gradient(to right, #2D5BE3 0px, #2D5BE3 5px, transparent 5px, transparent 8px)', opacity: 0.5 }} />
+              <span className={styles.legendDash} />
               <span className={styles.legendText}>3-week avg</span>
             </div>
           </ChartCard>
@@ -204,8 +208,8 @@ export default function Charts({ theme, onNavigate }) {
                 <Bar
                   yAxisId="protein"
                   dataKey="protein"
-                  fill="#EEF2FD"
-                  stroke="#2D5BE3"
+                  fill={barFill}
+                  stroke={barStroke}
                   strokeWidth={1}
                   radius={[4, 4, 0, 0]}
                   maxBarSize={32}
@@ -214,10 +218,10 @@ export default function Charts({ theme, onNavigate }) {
                   yAxisId="weight"
                   type="monotone"
                   dataKey="weight"
-                  stroke="#1A1A1A"
+                  stroke={weightColor}
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#1A1A1A', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#1A1A1A', strokeWidth: 2, stroke: '#fff' }}
+                  dot={{ r: 3, fill: weightColor, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: weightColor, strokeWidth: 2, stroke: isDark ? '#0A0A0A' : '#fff' }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -264,20 +268,20 @@ export default function Charts({ theme, onNavigate }) {
                   yAxisId="weight"
                   type="monotone"
                   dataKey="weight"
-                  stroke="#1A1A1A"
+                  stroke={weightColor}
                   strokeWidth={2}
-                  dot={{ r: 3, fill: '#1A1A1A', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#1A1A1A', strokeWidth: 2, stroke: '#fff' }}
+                  dot={{ r: 3, fill: weightColor, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: weightColor, strokeWidth: 2, stroke: isDark ? '#0A0A0A' : '#fff' }}
                 />
                 <Line
                   yAxisId="dose"
                   type="stepAfter"
                   dataKey="dose"
-                  stroke="#D97706"
+                  stroke={doseColor}
                   strokeWidth={2}
                   strokeDasharray="5 3"
                   dot={false}
-                  activeDot={{ r: 5, fill: '#D97706', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 5, fill: doseColor, strokeWidth: 2, stroke: isDark ? '#0A0A0A' : '#fff' }}
                 />
               </ComposedChart>
             </ResponsiveContainer>

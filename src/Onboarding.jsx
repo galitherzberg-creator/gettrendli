@@ -12,6 +12,7 @@ export default function Onboarding({ onComplete }) {
   const [nameError, setNameError] = useState(false)
 
   // Step 2
+  const [goalType, setGoalType] = useState('lose')
   const [startWeight, setStartWeight] = useState('')
   const [goalWeight, setGoalWeight] = useState('')
   const [height, setHeight] = useState('')
@@ -36,6 +37,8 @@ export default function Onboarding({ onComplete }) {
         height: parseFloat(height),
         lastInjectionDate: lastInjDate,
         injectionInterval: injInterval,
+        goalType,
+        proteinGoal: null,
       })
     }
   }
@@ -85,10 +88,30 @@ export default function Onboarding({ onComplete }) {
           {step === 2 && (
             <div className={styles.stepWrap}>
               <div className={styles.heroEmoji}>⚖️</div>
-              <h1 className={styles.stepTitle}>Your weight goals</h1>
+              <h1 className={styles.stepTitle}>Your weight goal</h1>
               <p className={styles.stepDesc}>
-                We use this to track progress and show goal projections.
+                {goalType === 'gain'
+                  ? "We'll track your progress and flip the metrics so gaining feels like winning."
+                  : 'We use this to track progress and show goal projections.'}
               </p>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>What's your goal?</label>
+                <div className={styles.intervalToggle}>
+                  {[
+                    { value: 'lose', label: '🔥 Lose fat' },
+                    { value: 'gain', label: '💪 Gain / build muscle' },
+                  ].map(o => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      className={`${styles.intervalBtn} ${goalType === o.value ? styles.intervalBtnActive : ''}`}
+                      onClick={() => setGoalType(o.value)}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {weightError && <p className={styles.fieldError}>Please fill in all three fields</p>}
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>Current weight</label>

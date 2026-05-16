@@ -30,9 +30,9 @@
 
 .headerTitle {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
 }
 
 .addBtn {
@@ -41,18 +41,18 @@
   gap: 6px;
   padding: 8px 14px;
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   border: none;
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
   flex-shrink: 0;
 }
 
-.addBtn:hover { background: var(--accent-hover); }
+.addBtn:hover { opacity: 0.8; }
 
 /* Scroll area */
 .scrollContent {
@@ -70,50 +70,49 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  padding: 48px 24px;
+  padding: 52px 24px;
   text-align: center;
 }
 
 .emptyIcon {
   color: var(--text-muted);
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .emptyTitle {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .emptyBody {
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--text-muted);
   max-width: 240px;
 }
 
 .emptyAddBtn {
   margin-top: 4px;
-  padding: 10px 20px;
+  padding: 11px 22px;
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   border: none;
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
 }
 
-.emptyAddBtn:hover { background: var(--accent-hover); }
+.emptyAddBtn:hover { opacity: 0.8; }
 
 /* Cards */
 .card {
   background: var(--surface);
   border-radius: var(--radius-lg);
   padding: 16px;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
 }
 
@@ -125,9 +124,9 @@
 }
 
 .cardTitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -148,10 +147,10 @@
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.editBtn:hover { border-color: var(--accent); color: var(--accent); }
+.editBtn:hover { border-color: var(--text-muted); color: var(--text-primary); }
 
 /* Measurement rows */
 .metricList {
@@ -184,8 +183,9 @@
 
 .metricValue {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.1px;
 }
 
 .metricDeltas {
@@ -204,13 +204,13 @@
 }
 
 .deltaNeg {
-  background: rgba(22, 163, 74, 0.12);
+  background: var(--green-light);
   color: var(--green);
 }
 
 .deltaPos {
-  background: rgba(220, 38, 38, 0.1);
-  color: #EF4444;
+  background: var(--red-light);
+  color: var(--red);
 }
 
 .deltaZero {
@@ -249,7 +249,7 @@
 
 .historyDate {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   flex-shrink: 0;
 }
@@ -267,7 +267,6 @@
   background: var(--surface);
   border-radius: var(--radius-lg);
   padding: 18px 16px;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -304,12 +303,12 @@
   align-items: center;
   background: var(--surface-2);
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   transition: border-color 0.15s;
 }
 
 .inputRow:focus-within {
-  border-color: var(--accent);
+  border-color: var(--text-primary);
   background: var(--surface);
 }
 
@@ -364,17 +363,17 @@
   flex: 1;
   padding: 11px;
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   border: none;
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
 }
 
-.saveBtn:hover { background: var(--accent-hover); }
+.saveBtn:hover { opacity: 0.8; }
 
 .cancelBtn {
   padding: 11px 16px;
@@ -403,7 +402,7 @@
   min-width: 0;
   padding: 7px 10px;
   background: var(--surface-2);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 12px;
@@ -417,10 +416,10 @@
 .sexBtn:hover { border-color: var(--text-muted); }
 
 .sexBtnActive {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--surface);
-  font-weight: 600;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background: var(--accent-light);
+  font-weight: 700;
 }
 
 /* Silhouette pair layout */
@@ -446,8 +445,8 @@
   display: block;
 }
 
-.silAccent { fill: var(--accent); opacity: 0.85; }
-.silMuted  { fill: var(--text-muted); opacity: 0.35; }
+.silAccent { fill: var(--text-primary); opacity: 0.9; }
+.silMuted  { fill: var(--text-muted);   opacity: 0.25; }
 
 .silLabel {
   font-size: 11px;
@@ -508,11 +507,11 @@
 }
 
 .navItem:hover { color: var(--text-secondary); }
-.navItemActive  { color: var(--accent); }
+.navItemActive  { color: var(--text-primary); }
 
 .navItemCenter {
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -520,15 +519,11 @@
   margin: 0 8px;
   padding: 0;
   gap: 0;
-  box-shadow: 0 4px 12px rgba(45, 91, 227, 0.35);
-  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  transition: opacity 0.15s;
 }
 
-.navItemCenter:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 4px 16px rgba(45, 91, 227, 0.45);
-  color: white;
-}
+.navItemCenter:hover { opacity: 0.8; color: var(--bg); }
 
 .navLabel {
   font-size: 10px;
@@ -544,7 +539,7 @@
   }
   .page {
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -4px 32px rgba(0,0,0,0.08);
+    box-shadow: 0 -4px 40px rgba(0,0,0,0.06);
     background: var(--bg);
   }
   .bottomNav { border-radius: 0 0 24px 24px; }

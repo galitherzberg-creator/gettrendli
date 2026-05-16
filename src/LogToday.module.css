@@ -29,12 +29,12 @@
 }
 
 .backBtn {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,28 +50,22 @@
 }
 
 .headerTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.2px;
 }
 
-.headerDate {
-  font-size: 12px;
+.headerSub {
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 1px;
+  font-weight: 500;
 }
 
 .headerSpacer {
-  width: 36px;
+  width: 34px;
   flex-shrink: 0;
-}
-
-.headerSub {
-  font-size: 11px;
-  color: var(--accent);
-  margin-top: 1px;
-  font-weight: 500;
 }
 
 /* Date selector */
@@ -85,12 +79,12 @@
 }
 
 .dateArrow {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,12 +93,12 @@
   transition: background 0.12s, color 0.12s;
 }
 .dateArrow:hover:not(:disabled) { background: var(--surface-2); color: var(--text-primary); }
-.dateArrow:disabled { opacity: 0.3; cursor: default; }
+.dateArrow:disabled { opacity: 0.25; cursor: default; }
 
 .dateLabelBtn {
   flex: 1;
   max-width: 220px;
-  height: 34px;
+  height: 32px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 100px;
@@ -117,7 +111,7 @@
   transition: background 0.12s, border-color 0.12s;
   padding: 0 14px;
 }
-.dateLabelBtn:hover { background: var(--surface-2); border-color: var(--text-muted); }
+.dateLabelBtn:hover { background: var(--surface-2); }
 
 .dateLabelText {
   font-size: 13px;
@@ -129,7 +123,7 @@
 .todayPill {
   font-size: 10px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--text-primary);
   background: var(--accent-light);
   padding: 2px 7px;
   border-radius: 100px;
@@ -156,7 +150,7 @@
   padding: 16px 16px 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* Nutrition card (always open) */
@@ -164,8 +158,7 @@
   background: var(--surface);
   border-radius: var(--radius-lg);
   padding: 16px;
-  box-shadow: var(--shadow-sm);
-  border: 1.5px solid var(--accent-light);
+  border: 1px solid var(--border);
 }
 
 .nutritionHeader {
@@ -186,7 +179,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-primary);
   background: var(--accent-light);
   padding: 3px 8px;
   border-radius: 100px;
@@ -202,22 +195,19 @@
 .section {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
   border: 1px solid var(--border);
   transition: border-color 0.2s;
 }
 
-.sectionOpen {
-  border-color: var(--border);
-}
+.sectionOpen { border-color: var(--text-muted); }
 
 .sectionTrigger {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 16px;
+  padding: 14px 16px;
   background: none;
   border: none;
   cursor: pointer;
@@ -241,9 +231,9 @@
 }
 
 .sectionIcon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
   background: var(--surface-2);
   color: var(--text-secondary);
   display: flex;
@@ -261,7 +251,7 @@
 .sectionBadge {
   font-size: 11px;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--text-primary);
   background: var(--accent-light);
   padding: 2px 8px;
   border-radius: 100px;
@@ -274,28 +264,22 @@
 
 .chevron {
   color: var(--text-muted);
-  transition: transform 0.22s ease;
+  transition: transform 0.2s ease;
   flex-shrink: 0;
 }
 
-.chevronOpen {
-  transform: rotate(180deg);
-}
+.chevronOpen { transform: rotate(180deg); }
 
 /* Smooth collapse via grid trick */
 .sectionBody {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.24s ease;
+  transition: grid-template-rows 0.22s ease;
 }
 
-.sectionBodyOpen {
-  grid-template-rows: 1fr;
-}
+.sectionBodyOpen { grid-template-rows: 1fr; }
 
-.sectionInner {
-  overflow: hidden;
-}
+.sectionInner { overflow: hidden; }
 
 .sectionContent {
   padding: 0 16px 16px;
@@ -325,10 +309,10 @@
 }
 
 .requiredDot {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--text-primary);
   flex-shrink: 0;
 }
 
@@ -337,7 +321,7 @@
   align-items: center;
   background: var(--surface-2);
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   overflow: hidden;
   transition: border-color 0.15s;
   width: 100%;
@@ -345,7 +329,7 @@
 }
 
 .inputRow:focus-within {
-  border-color: var(--accent);
+  border-color: var(--text-primary);
   background: var(--surface);
 }
 
@@ -365,15 +349,9 @@
 }
 
 .input::-webkit-outer-spin-button,
-.input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
+.input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-.input::placeholder {
-  color: var(--text-muted);
-  font-weight: 400;
-}
+.input::placeholder { color: var(--text-muted); font-weight: 400; }
 
 .inputUnit {
   padding: 0 12px 0 4px;
@@ -387,7 +365,7 @@
   flex: 1;
   padding: 11px 12px;
   background: var(--surface-2);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 15px;
@@ -399,10 +377,7 @@
   width: 100%;
 }
 
-.dateInput:focus {
-  border-color: var(--accent);
-  background: var(--surface);
-}
+.dateInput:focus { border-color: var(--text-primary); background: var(--surface); }
 
 .fieldError {
   font-size: 11px;
@@ -427,7 +402,7 @@
   width: 100%;
   padding: 11px 36px 11px 12px;
   background: var(--surface-2);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 15px;
@@ -440,10 +415,7 @@
   transition: border-color 0.15s;
 }
 
-.select:focus {
-  border-color: var(--accent);
-  background: var(--surface);
-}
+.select:focus { border-color: var(--text-primary); background: var(--surface); }
 
 .selectChevron {
   position: absolute;
@@ -457,15 +429,13 @@
   display: flex;
   align-items: center;
   background: var(--surface-2);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow: hidden;
   transition: border-color 0.15s;
 }
 
-.stepper:focus-within {
-  border-color: var(--accent);
-}
+.stepper:focus-within { border-color: var(--text-primary); }
 
 .stepperBtn {
   width: 44px;
@@ -481,15 +451,8 @@
   transition: background 0.12s, color 0.12s;
 }
 
-.stepperBtn:hover:not(:disabled) {
-  background: var(--border);
-  color: var(--text-primary);
-}
-
-.stepperBtn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
+.stepperBtn:hover:not(:disabled) { background: var(--border); color: var(--text-primary); }
+.stepperBtn:disabled { opacity: 0.25; cursor: default; }
 
 .stepperVal {
   flex: 1;
@@ -519,7 +482,6 @@
   background: var(--surface);
   border-radius: var(--radius-lg);
   padding: 14px 16px 16px;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
 }
 
@@ -549,7 +511,7 @@
   gap: 4px;
   padding: 10px 8px 8px;
   background: var(--surface-2);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-family: inherit;
   cursor: pointer;
@@ -561,14 +523,11 @@
 .moodBtn:hover { border-color: var(--text-muted); }
 
 .moodBtnActive {
-  border-color: var(--accent);
+  border-color: var(--text-primary);
   background: var(--accent-light);
 }
 
-.moodIcon {
-  font-size: 20px;
-  line-height: 1;
-}
+.moodIcon { font-size: 20px; line-height: 1; }
 
 .moodLabel {
   font-size: 10px;
@@ -578,28 +537,26 @@
 }
 
 .moodBtnActive .moodLabel {
-  color: var(--accent);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 /* Save area */
-.saveSpacor {
-  height: 100px;
-}
+.saveSpacor { height: 100px; }
 
 .saveArea {
   position: sticky;
   bottom: 0;
   padding: 12px 16px max(16px, env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--bg) 80%, transparent);
+  background: linear-gradient(to top, var(--bg) 75%, transparent);
   z-index: 10;
 }
 
 .saveBtn {
   width: 100%;
-  padding: 15px 24px;
+  padding: 14px 24px;
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   border: none;
   border-radius: var(--radius-md);
   font-family: inherit;
@@ -607,18 +564,12 @@
   font-weight: 700;
   letter-spacing: -0.1px;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 4px 14px rgba(45, 91, 227, 0.3);
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-.saveBtn:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 6px 18px rgba(45, 91, 227, 0.38);
-}
-
-.saveBtn:active {
-  transform: scale(0.98);
-}
+.saveBtn:hover { opacity: 0.85; }
+.saveBtn:active { transform: scale(0.98); }
 
 /* Toast */
 .toast {
@@ -627,8 +578,8 @@
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--text-primary);
-  color: white;
-  padding: 11px 18px;
+  color: var(--bg);
+  padding: 10px 18px;
   border-radius: 100px;
   font-size: 13px;
   font-weight: 500;
@@ -637,7 +588,7 @@
   gap: 8px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   white-space: nowrap;
   z-index: 200;
   box-shadow: var(--shadow-md);
@@ -657,7 +608,7 @@
   }
   .page {
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -4px 32px rgba(0,0,0,0.08);
+    box-shadow: 0 -4px 40px rgba(0,0,0,0.06);
     background: var(--bg);
   }
 }

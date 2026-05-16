@@ -28,6 +28,8 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
   const [goalWeight, setGoalWeight]           = useState(String(userSettings.goalWeight))
   const [height, setHeight]                   = useState(String(userSettings.height ?? ''))
   const [injectionInterval, setInjInterval]   = useState(userSettings.injectionInterval ?? 7)
+  const [goalType, setGoalType]               = useState(userSettings.goalType ?? 'lose')
+  const [proteinGoal, setProteinGoal]         = useState(String(userSettings.proteinGoal ?? ''))
   const [profileSaved, setProfileSaved]       = useState(false)
 
   // TDEE
@@ -38,12 +40,24 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
   const [activity,   setActivity]   = useState('moderate')
 
   const tdee      = computeTDEE(sex, +age, +tdeeHeight, +tdeeWeight, activity)
-  const suggested = tdee ? `${tdee - 500}–${tdee - 300}` : null
+  const suggested = tdee
+    ? goalType === 'gain'
+      ? `${tdee + 300}–${tdee + 500}`
+      : `${tdee - 500}–${tdee - 300}`
+    : null
 
   function handleProfileSave() {
     const parsed = parseFloat(goalWeight)
     if (!name.trim() || isNaN(parsed) || parsed <= 0) return
-    onSaveSettings({ ...userSettings, name: name.trim(), goalWeight: parsed, height: parseFloat(height) || userSettings.height, injectionInterval })
+    onSaveSettings({
+      ...userSettings,
+      name: name.trim(),
+      goalWeight: parsed,
+      height: parseFloat(height) || userSettings.height,
+      injectionInterval,
+      goalType,
+      proteinGoal: parseFloat(proteinGoal) || null,
+    })
     setProfileSaved(true)
     setTimeout(() => setProfileSaved(false), 2000)
   }
@@ -153,6 +167,45 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>Goal type</label>
+              <div className={styles.toggle}>
+                {[
+                  { value: 'lose', label: '🔥 Lose fat' },
+                  { value: 'gain', label: '💪 Gain / build muscle' },
+                ].map(o => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    className={`${styles.toggleBtn} ${goalType === o.value ? styles.toggleBtnActive : ''}`}
+                    onClick={() => setGoalType(o.value)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>Daily protein goal <span className={styles.optionalTag}>optional</span></label>
+              <div className={styles.inputRow}>
+                <input
+                  className={styles.input}
+                  type="number"
+                  inputMode="numeric"
+                  value={proteinGoal}
+                  onChange={e => setProteinGoal(e.target.value)}
+                  placeholder="e.g. 160"
+                />
+                <span className={styles.unit}>g</span>
+              </div>
+              <p className={styles.fieldHint}>
+                {goalType === 'gain'
+                  ? 'Aim for ~1.6–2.2 g per kg of body weight to support muscle building.'
+                  : 'Aim for ~1.2–1.6 g per kg to preserve muscle while losing.'}
+              </p>
             </div>
 
             <button className={`${styles.saveBtn} ${profileSaved ? styles.saveBtnDone : ''}`} onClick={handleProfileSave}>
@@ -267,8 +320,10 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
                   </div>
                 </div>
                 <p className={styles.resultNote}>
-                  Suggested range is 300–500 kcal below your TDEE — a common starting point
-                  for gradual loss. Discuss your actual target with your care team.
+                  {goalType === 'gain'
+                    ? 'Suggested range is 300–500 kcal above your TDEE — a lean bulk surplus to build muscle without excess fat.'
+                    : 'Suggested range is 300–500 kcal below your TDEE — a common starting point for gradual loss.'}
+                  {' '}Discuss your actual target with your care team.
                 </p>
               </div>
             ) : (

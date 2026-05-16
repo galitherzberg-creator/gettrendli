@@ -12,14 +12,14 @@ const MOOD_MAP = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function WeightChange({ current, previous }) {
+function WeightChange({ current, previous, goalType = 'lose' }) {
   if (!previous) return null
-  const diff = (parseFloat(current) - parseFloat(previous)).toFixed(1)
-  const isNeg = diff < 0
-  const isZero = diff == 0
+  const diff = parseFloat((parseFloat(current) - parseFloat(previous)).toFixed(1))
+  const isZero = diff === 0
+  const isGood = goalType === 'gain' ? diff > 0 : diff < 0
   return (
-    <span className={`${styles.weightBadge} ${isNeg ? styles.weightBadgeGood : isZero ? styles.weightBadgeNeutral : styles.weightBadgeUp}`}>
-      {isNeg ? '' : '+'}{diff} kg {isZero ? 'no change' : 'from last entry'}
+    <span className={`${styles.weightBadge} ${isGood ? styles.weightBadgeGood : isZero ? styles.weightBadgeNeutral : styles.weightBadgeUp}`}>
+      {diff > 0 ? '+' : ''}{diff} kg {isZero ? 'no change' : 'from last entry'}
     </span>
   )
 }
@@ -75,18 +75,23 @@ function computeNextInjection(logs, userSettings) {
   return { daysUntil, nextDate: next.toISOString().split('T')[0] }
 }
 
-function computeProjection(logs, goalWeight) {
+function computeProjection(logs, goalWeight, goalType = 'lose') {
   const entries = Object.entries(logs)
     .filter(([, v]) => v.weight)
     .sort(([a], [b]) => a.localeCompare(b))
   if (entries.length < 2) return null
   const [firstDate, firstEntry] = entries[0]
   const [lastDate,  lastEntry]  = entries[entries.length - 1]
-  const days   = (new Date(lastDate) - new Date(firstDate)) / 86400000
-  const lost   = parseFloat(firstEntry.weight) - parseFloat(lastEntry.weight)
-  if (lost <= 0 || days <= 0) return null
-  const ratePerDay  = lost / days
-  const remaining   = parseFloat(lastEntry.weight) - goalWeight
+  const days = (new Date(lastDate) - new Date(firstDate)) / 86400000
+  if (days <= 0) return null
+  const delta = goalType === 'gain'
+    ? parseFloat(lastEntry.weight) - parseFloat(firstEntry.weight)   // gained
+    : parseFloat(firstEntry.weight) - parseFloat(lastEntry.weight)   // lost
+  if (delta <= 0) return null
+  const ratePerDay = delta / days
+  const remaining  = goalType === 'gain'
+    ? goalWeight - parseFloat(lastEntry.weight)
+    : parseFloat(lastEntry.weight) - goalWeight
   if (remaining <= 0) return null
   const daysLeft = Math.round(remaining / ratePerDay)
   const target   = new Date()
@@ -95,7 +100,7 @@ function computeProjection(logs, goalWeight) {
 }
 
 export default function Dashboard({ logs, userSettings, onNavigate }) {
-  const { name, startWeight, goalWeight, height } = userSettings
+  const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null } = userSettings
   const { text: insightText } = mockInsight
   const weekLabel = getWeekLabel()
 
@@ -115,12 +120,25 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
     ? formatDate(lastInjection.injectionDate, { month: 'short', day: 'numeric' })
     : null
 
-  const goalProgress = latestWeight && startWeight > goalWeight
-    ? Math.min(100, Math.max(0, ((startWeight - latestWeight) / (startWeight - goalWeight)) * 100))
+  // Direction-aware goal progress
+  const goalProgress = latestWeight && startWeight && goalWeight && startWeight !== goalWeight
+    ? goalType === 'gain'
+      ? Math.min(100, Math.max(0, ((latestWeight - startWeight) / (goalWeight - startWeight)) * 100))
+      : Math.min(100, Math.max(0, ((startWeight - latestWeight) / (startWeight - goalWeight)) * 100))
     : null
-  const kgToGo       = latestWeight ? Math.max(0, latestWeight - goalWeight).toFixed(1) : null
+  const kgToGo = latestWeight
+    ? goalType === 'gain'
+      ? Math.max(0, goalWeight - latestWeight).toFixed(1)
+      : Math.max(0, latestWeight - goalWeight).toFixed(1)
+    : null
+
+  // Protein goal progress (optional)
+  const proteinPct = proteinGoal && todayLog.protein
+    ? Math.min(100, Math.round((todayLog.protein / proteinGoal) * 100))
+    : null
+
   const bmi           = computeBMI(latestWeight, height)
-  const projectedDate = computeProjection(logs, goalWeight)
+  const projectedDate = computeProjection(logs, goalWeight, goalType)
   const nextInj       = computeNextInjection(logs, userSettings)
 
   return (
@@ -147,7 +165,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
           </div>
           {bmi && <p className={styles.bmi}>BMI {bmi}</p>}
 
-          <WeightChange current={latestWeight} previous={prevWeight} />
+          <WeightChange current={latestWeight} previous={prevWeight} goalType={goalType} />
 
           {goalProgress !== null && (
             <div className={styles.goalWrap}>
@@ -227,6 +245,17 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
                 logged={hasInjection}
               />
             </div>
+
+            {proteinPct !== null && (
+              <div className={styles.proteinGoalWrap}>
+                <div className={styles.proteinGoalBar}>
+                  <div className={styles.proteinGoalFill} style={{ width: `${proteinPct}%` }} />
+                </div>
+                <p className={styles.proteinGoalText}>
+                  <span>{proteinPct}%</span> of protein goal · {todayLog.protein}g / {proteinGoal}g
+                </p>
+              </div>
+            )}
 
             {todayLog.mood && MOOD_MAP[todayLog.mood] && (
               <div className={styles.todayMoodRow}>

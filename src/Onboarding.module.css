@@ -11,32 +11,30 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 24px 24px max(28px, env(safe-area-inset-bottom));
+  padding: 28px 24px max(28px, env(safe-area-inset-bottom));
 }
 
 /* Progress bar */
 .progressBar {
   display: flex;
   gap: 6px;
-  margin-bottom: 40px;
+  margin-bottom: 44px;
 }
 
 .progressSegment {
   flex: 1;
-  height: 4px;
+  height: 3px;
   border-radius: 100px;
   background: var(--border);
   transition: background 0.3s ease;
 }
 
 .progressSegmentFilled {
-  background: var(--accent);
+  background: var(--text-primary);
 }
 
 /* Content area */
-.content {
-  flex: 1;
-}
+.content { flex: 1; }
 
 .stepWrap {
   display: flex;
@@ -45,22 +43,22 @@
 }
 
 .heroEmoji {
-  font-size: 40px;
+  font-size: 36px;
   line-height: 1;
 }
 
 .stepTitle {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.5px;
-  line-height: 1.2;
+  letter-spacing: -0.7px;
+  line-height: 1.15;
   margin: 0;
 }
 
 .stepDesc {
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--text-secondary);
   margin: 0;
 }
@@ -82,15 +80,13 @@
   display: flex;
   align-items: center;
   background: var(--surface);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
   transition: border-color 0.15s;
 }
 
-.inputRow:focus-within {
-  border-color: var(--accent);
-}
+.inputRow:focus-within { border-color: var(--text-primary); }
 
 .input {
   flex: 1;
@@ -114,7 +110,7 @@
 
 /* Standalone input (no row wrapper) */
 .fieldGroup > .input {
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
   padding: 13px 16px;
@@ -124,13 +120,11 @@
 }
 
 .fieldGroup > .input:focus {
-  border-color: var(--accent);
+  border-color: var(--text-primary);
   outline: none;
 }
 
-.inputError {
-  border-color: var(--red) !important;
-}
+.inputError { border-color: var(--red) !important; }
 
 .unit {
   padding: 0 16px 0 4px;
@@ -143,7 +137,7 @@
 .dateInput {
   padding: 13px 16px;
   background: var(--surface);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 16px;
@@ -155,7 +149,7 @@
   width: 100%;
 }
 
-.dateInput:focus { border-color: var(--accent); }
+.dateInput:focus { border-color: var(--text-primary); }
 
 .fieldError {
   font-size: 12px;
@@ -173,23 +167,22 @@
   flex: 1;
   padding: 12px 16px;
   background: var(--surface);
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
 
 .intervalBtn:hover { border-color: var(--text-muted); }
 
 .intervalBtnActive {
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-  background: var(--accent-light);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
 .skipNote {
@@ -202,11 +195,11 @@
 .actions {
   display: flex;
   gap: 10px;
-  padding-top: 24px;
+  padding-top: 28px;
 }
 
 .backBtn {
-  padding: 15px 20px;
+  padding: 14px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -223,20 +216,20 @@
 
 .nextBtn {
   flex: 1;
-  padding: 15px 24px;
+  padding: 14px 24px;
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   border: none;
   border-radius: var(--radius-md);
   font-family: inherit;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 4px 14px rgba(45, 91, 227, 0.3);
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-.nextBtn:hover { background: var(--accent-hover); }
+.nextBtn:hover { opacity: 0.85; }
 .nextBtn:active { transform: scale(0.98); }
 
 @media (min-width: 520px) {
@@ -247,8 +240,8 @@
   .page {
     min-height: auto;
     border-radius: var(--radius-xl);
-    box-shadow: 0 8px 48px rgba(0,0,0,0.1);
-    padding: 40px 40px 32px;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.07);
+    padding: 40px 40px 36px;
     background: var(--bg);
     margin: 32px 0;
   }

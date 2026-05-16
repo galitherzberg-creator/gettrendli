@@ -18,7 +18,7 @@
 
 /* Header */
 .header {
-  padding: 20px 20px 0;
+  padding: 22px 20px 0;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -34,29 +34,30 @@
 
 .greeting {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.4px;
+  letter-spacing: -0.6px;
   line-height: 1.2;
 }
 
 .weekLabel {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 3px;
   font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 .avatarBtn {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--accent);
-  color: white;
+  background: var(--text-primary);
+  color: var(--bg);
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   font-family: inherit;
   display: flex;
   align-items: center;
@@ -65,7 +66,7 @@
   transition: opacity 0.15s;
 }
 
-.avatarBtn:hover { opacity: 0.85; }
+.avatarBtn:hover { opacity: 0.75; }
 
 /* Weight hero card */
 .weightCard {
@@ -77,72 +78,73 @@
 }
 
 .weightEyebrow {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.5);
-  margin-bottom: 8px;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 6px;
 }
 
 .weightRow {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 5px;
+  margin-bottom: 12px;
 }
 
 .weightValue {
-  font-size: 56px;
-  font-weight: 700;
-  letter-spacing: -2px;
+  font-size: 62px;
+  font-weight: 800;
+  letter-spacing: -3px;
   line-height: 1;
 }
 
 .weightUnit {
   font-size: 20px;
   font-weight: 400;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.45);
   margin-bottom: 2px;
+  letter-spacing: -0.3px;
 }
 
 .weightBadge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 11px;
+  padding: 4px 10px;
   border-radius: 100px;
   font-size: 12px;
   font-weight: 500;
 }
 
 .weightBadgeGood {
-  background: rgba(22, 163, 74, 0.2);
+  background: rgba(34, 197, 94, 0.18);
   color: #4ADE80;
 }
 
 .weightBadgeUp {
-  background: rgba(220, 38, 38, 0.2);
+  background: rgba(239, 68, 68, 0.18);
   color: #FCA5A5;
 }
 
 .weightBadgeNeutral {
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
 }
 
 /* BMI */
 .bmi {
   font-size: 12px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.45);
-  margin-bottom: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 10px;
   letter-spacing: 0.02em;
 }
 
 /* Projection */
 .projection {
   font-size: 11px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.35);
   margin-top: 4px;
 }
 
@@ -152,29 +154,29 @@
 }
 
 .goalBar {
-  height: 4px;
-  background: rgba(255,255,255,0.15);
+  height: 3px;
+  background: rgba(255,255,255,0.12);
   border-radius: 100px;
   overflow: hidden;
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 
 .goalFill {
   height: 100%;
-  background: white;
+  background: rgba(255,255,255,0.85);
   border-radius: 100px;
   transition: width 0.6s ease;
 }
 
 .goalLabel {
   font-size: 12px;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.45);
   font-weight: 400;
 }
 
 .goalPct {
   font-weight: 700;
-  color: white;
+  color: rgba(255,255,255,0.85);
 }
 
 /* Sections */
@@ -183,13 +185,71 @@
 }
 
 .sectionTitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-muted);
   margin-bottom: 10px;
 }
+
+/* Injection countdown banner */
+.injBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.injBannerOverdue {
+  background: var(--red-light);
+  border-color: rgba(220, 38, 38, 0.18);
+}
+
+.injBannerToday {
+  background: var(--green-light);
+  border-color: rgba(21, 128, 61, 0.18);
+}
+
+.injBannerIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.injBannerOverdue .injBannerIcon { background: var(--red); }
+.injBannerToday .injBannerIcon   { background: var(--green); }
+
+.injBannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.injBannerLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.injBannerValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.1px;
+}
+
+.injBannerOverdue .injBannerValue { color: var(--red); }
+.injBannerToday .injBannerValue   { color: var(--green); }
 
 /* Snapshot grid */
 .snapshotGrid {
@@ -205,7 +265,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
 }
 
 .snapshotLabel {
@@ -217,9 +277,9 @@
 
 .snapshotValue {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
   line-height: 1.1;
 }
 
@@ -228,97 +288,11 @@
   color: var(--text-muted);
 }
 
-/* Log status */
-.logStatusHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.logCount {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.logCard {
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  box-shadow: var(--shadow-sm);
-}
-
-.logGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 16px;
-  margin-bottom: 16px;
-}
-
-.logItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logDot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logDotDone {
-  background: var(--green);
-}
-
-.logDotEmpty {
-  background: var(--surface-2);
-  border: 1.5px solid var(--border);
-}
-
-.logLabel {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.logLabelDone {
-  color: var(--text-primary);
-}
-
-.logBtn {
-  width: 100%;
-  padding: 13px 20px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  transition: background 0.15s, transform 0.1s;
-  letter-spacing: -0.1px;
-}
-
-.logBtn:hover { background: var(--accent-hover); }
-.logBtn:active { transform: scale(0.98); }
-
 /* Today card */
 .todayCard {
   background: var(--surface);
   border-radius: var(--radius-lg);
   padding: 18px 16px 16px;
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
 }
 
@@ -345,7 +319,7 @@
 .todayBadge {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--text-primary);
   background: var(--accent-light);
   padding: 4px 9px;
   border-radius: 100px;
@@ -370,17 +344,18 @@
 
 .todayMetric {
   background: var(--surface);
-  padding: 12px 14px;
+  padding: 11px 14px;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
 .todayMetricLabel {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .todayMetricPrimary {
@@ -394,13 +369,86 @@
 .todayMetricEmpty {
   font-size: 17px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--border);
 }
 
 .todayMetricSecondary {
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* Protein goal bar (Today card) */
+.proteinGoalWrap {
+  margin-bottom: 12px;
+}
+
+.proteinGoalBar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.proteinGoalFill {
+  height: 100%;
+  background: var(--text-primary);
+  border-radius: 100px;
+  transition: width 0.5s ease;
+}
+
+.proteinGoalText {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.proteinGoalText span {
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* Today mood row */
+.todayMoodRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+
+.todayMoodIcon { font-size: 15px; line-height: 1; }
+
+.todayMoodText {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Log button */
+.logBtn {
+  width: 100%;
+  padding: 13px 20px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: -0.1px;
+}
+
+.logBtn:hover { opacity: 0.85; }
+.logBtn:active { transform: scale(0.98); }
 
 /* Weekly average header */
 .weeklyHeader {
@@ -421,19 +469,18 @@
   background: var(--surface);
   border-radius: var(--radius-md);
   padding: 16px;
-  box-shadow: var(--shadow-sm);
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  border-left: 3px solid var(--accent);
+  border: 1px solid var(--border);
 }
 
 .insightIcon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
-  background: var(--accent-light);
-  color: var(--accent);
+  background: var(--surface-2);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -447,8 +494,8 @@
 }
 
 .insightText {
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--text-secondary);
   margin-bottom: 10px;
 }
@@ -460,7 +507,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--text-primary);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -469,89 +516,6 @@
 }
 
 .insightLink:hover { gap: 7px; }
-
-/* Injection countdown banner */
-.injBanner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 16px;
-  background: var(--accent-light);
-  border: 1px solid rgba(45, 91, 227, 0.15);
-  border-radius: var(--radius-md);
-}
-
-.injBannerOverdue {
-  background: rgba(220, 38, 38, 0.07);
-  border-color: rgba(220, 38, 38, 0.2);
-}
-
-.injBannerToday {
-  background: rgba(22, 163, 74, 0.08);
-  border-color: rgba(22, 163, 74, 0.2);
-}
-
-.injBannerIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.injBannerOverdue .injBannerIcon {
-  background: #EF4444;
-}
-
-.injBannerToday .injBannerIcon {
-  background: var(--green);
-}
-
-.injBannerText {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.injBannerLabel {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-}
-
-.injBannerValue {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.1px;
-}
-
-.injBannerOverdue .injBannerValue { color: #EF4444; }
-.injBannerToday .injBannerValue   { color: var(--green); }
-
-/* Today mood row */
-.todayMoodRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  margin-bottom: 10px;
-}
-
-.todayMoodIcon { font-size: 16px; line-height: 1; }
-
-.todayMoodText {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
 
 /* Bottom nav */
 .bottomNav {
@@ -587,13 +551,11 @@
 
 .navItem:hover { color: var(--text-secondary); }
 
-.navItemActive {
-  color: var(--accent);
-}
+.navItemActive { color: var(--text-primary); }
 
 .navItemCenter {
   background: var(--accent);
-  color: white;
+  color: var(--bg);
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -601,15 +563,11 @@
   margin: 0 8px;
   padding: 0;
   gap: 0;
-  box-shadow: 0 4px 12px rgba(45, 91, 227, 0.35);
-  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  transition: opacity 0.15s;
 }
 
-.navItemCenter:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 4px 16px rgba(45, 91, 227, 0.45);
-  color: white;
-}
+.navItemCenter:hover { opacity: 0.8; color: var(--bg); }
 
 .navLabel {
   font-size: 10px;
@@ -617,7 +575,21 @@
   letter-spacing: 0.01em;
 }
 
-/* Responsive: desktop shows centered card with bg */
+/* Log status */
+.logStatusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.logCount {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Responsive: desktop */
 @media (min-width: 520px) {
   .shell {
     align-items: flex-start;
@@ -627,7 +599,7 @@
 
   .page {
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -4px 32px rgba(0,0,0,0.08);
+    box-shadow: 0 -4px 40px rgba(0,0,0,0.06);
     background: var(--bg);
   }
 

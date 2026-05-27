@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   ResponsiveContainer, AreaChart, Area, ComposedChart,
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -101,6 +102,9 @@ function ChartCard({ title, description, children, legend }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Charts({ onNavigate }) {
+  const [range, setRange]           = useState('8W')
+  const [bannerOpen, setBannerOpen] = useState(true)
+
   const gridColor    = T.hair
   const gridProps    = { stroke: gridColor, strokeDasharray: '3 3' }
   const axisS        = { fontSize: 11, fill: T.mute, fontFamily: FONT.ui }
@@ -116,10 +120,45 @@ export default function Charts({ onNavigate }) {
     <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: FONT.ui }}>
       <div style={{ maxWidth: 430, margin: '0 auto', paddingBottom: 100 }}>
 
+        {/* ── Info banner ─────────────────────────────────────────── */}
+        {bannerOpen && (
+          <div style={{
+            margin: '12px 16px 0', padding: '12px 14px',
+            background: T.surf2, borderRadius: 10,
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.mute} strokeWidth="1.8" style={{ marginTop: 2, flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.5" strokeLinecap="round"/>
+            </svg>
+            <div style={{ flex: 1, fontFamily: FONT.ui, fontSize: 12, color: T.text, lineHeight: 1.45 }}>
+              Charts currently show sample data. They'll update automatically as you log more weeks.
+            </div>
+            <button onClick={() => setBannerOpen(false)} style={{ background: 'none', border: 0, padding: 2, cursor: 'pointer', color: T.mute, lineHeight: 0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18"/>
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* ── Header ─────────────────────────────────────────────── */}
         <div style={{ padding: '18px 22px 0' }}>
           <div style={{ fontFamily: FONT.ui, fontSize: 32, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1 }}>Charts</div>
           <div style={{ fontFamily: FONT.ui, fontSize: 14, color: T.mute, marginTop: 6 }}>Last 8 weeks of data</div>
+        </div>
+
+        {/* ── Range chips ────────────────────────────────────────── */}
+        <div style={{ padding: '14px 22px 0', display: 'flex', gap: 6 }}>
+          {['4W','8W','3M','6M','1Y'].map(r => (
+            <button key={r} onClick={() => setRange(r)} style={{
+              padding: '6px 12px', borderRadius: 14,
+              border: `1px solid ${r === range ? T.ink : T.hair}`,
+              background: r === range ? T.ink : 'transparent',
+              color: r === range ? T.inkText : T.text,
+              fontFamily: FONT.mono, fontSize: 10, fontWeight: 600,
+              letterSpacing: '0.08em', cursor: 'pointer',
+            }}>{r}</button>
+          ))}
         </div>
 
         <div style={{ margin: '18px 22px 0', height: 1, background: T.hair }} />

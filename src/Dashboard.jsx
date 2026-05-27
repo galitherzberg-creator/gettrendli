@@ -167,13 +167,15 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
   const { avgCalories, avgProtein: weeklyAvgProt, totalActivityMin, activityDays, lastInjection, latestWeight, prevWeight } = computeWeeklyData(logs)
 
   const todayLog      = logs[todayISO] || {}
-  const hasCalories   = !!todayLog.calories
-  const hasProtein    = !!todayLog.protein
-  const hasActivity   = !!todayLog.activityDuration
-  const hasInjection  = !!todayLog.dose
-  const hasMood       = !!todayLog.mood
-  const loggedCount   = [hasCalories, hasProtein, todayLog.weight, hasActivity].filter(Boolean).length
+  const hasCalories    = !!todayLog.calories
+  const hasProtein     = !!todayLog.protein
+  const hasActivity    = !!todayLog.activityDuration
+  const hasInjection   = !!todayLog.dose
+  const hasMood        = !!todayLog.mood
+  const hasSideEffects = (todayLog.sideEffects?.length ?? 0) > 0
   const todayWater    = todayLog.water || 0
+  const hasWater      = todayWater > 0
+  const loggedCount   = [!!todayLog.weight, hasProtein, hasWater, hasSideEffects, hasMood].filter(Boolean).length
 
   // Goal progress
   const goalProgress = latestWeight && startWeight && goalWeight && startWeight !== goalWeight
@@ -202,13 +204,19 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
   const todayDisplay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const firstName    = name ? name.split(' ')[0] : 'there'
 
-  // Inline today log rows
+  // Inline today log rows — matches design: Weight / Protein / Water / Side effects / Mood
+  const moodLabel = todayLog.mood
+    ? todayLog.mood.charAt(0).toUpperCase() + todayLog.mood.slice(1)
+    : 'Log now'
+  const sideEffectsLabel = hasSideEffects
+    ? todayLog.sideEffects.map(s => s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ')).join(', ')
+    : 'Log now'
   const todayRows = [
-    { label: 'Weight',   val: todayLog.weight ? `${todayLog.weight} kg`   : 'Log now', done: !!todayLog.weight },
-    { label: 'Calories', val: hasCalories      ? `${Number(todayLog.calories).toLocaleString()} kcal` : 'Log now', done: hasCalories },
-    { label: 'Protein',  val: hasProtein        ? `${todayLog.protein} g`   : 'Log now', done: hasProtein },
-    { label: 'Workout',  val: hasActivity       ? `${todayLog.activityType || 'Activity'} · ${todayLog.activityDuration} min` : 'Log now', done: hasActivity },
-    { label: 'Injection',val: hasInjection      ? `${Number(todayLog.dose).toFixed(2)} mg` : 'Log now', done: hasInjection },
+    { label: 'Weight',       val: todayLog.weight ? `${todayLog.weight} kg` : 'Log now', done: !!todayLog.weight },
+    { label: 'Protein',      val: hasProtein       ? `${todayLog.protein} g`             : 'Log now', done: hasProtein },
+    { label: 'Water',        val: hasWater         ? `${todayWater} cup${todayWater !== 1 ? 's' : ''}` : 'Log now', done: hasWater },
+    { label: 'Side effects', val: sideEffectsLabel, done: hasSideEffects },
+    { label: 'Mood',         val: moodLabel,        done: hasMood },
   ]
 
   return (

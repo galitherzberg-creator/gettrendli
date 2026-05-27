@@ -121,11 +121,17 @@ function computeInsightWeeks(logs) {
       const activityDays = withActivity.length
       const activityMin  = withActivity.reduce((s, e) => s + +e.activityDuration, 0)
       const latestDose   = withDose.length ? withDose[withDose.length - 1].dose : null
+      const latestWeight = weightEntries.length ? parseFloat(weightEntries[weightEntries.length - 1].weight) : null
       const weightChange = weightEntries.length >= 2
         ? parseFloat((parseFloat(weightEntries[weightEntries.length - 1].weight) - parseFloat(weightEntries[0].weight)).toFixed(1))
         : null
 
-      return { week: label, calories: avgCalories, protein: avgProtein, activityDays, activityMin, dose: latestDose ? `${latestDose}mg` : null, weightChange }
+      return {
+        week: label, calories: avgCalories, protein: avgProtein,
+        activityDays, activityMin, dose: latestDose ? `${latestDose}mg` : null,
+        latestWeight, weightChange,
+        logsCount: entries.length,
+      }
     })
 
   // Mark best week (highest protein)
@@ -185,35 +191,50 @@ export default function Insights({ logs = {}, onNavigate }) {
     <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: FONT.ui }}>
       <div style={{ maxWidth: 430, margin: '0 auto', paddingBottom: 100 }}>
 
+        {/* ── Header ───────────────────────────────────────────────── */}
+        <div style={{ padding: '18px 22px 0' }}>
+          <div style={{ fontFamily: FONT.ui, fontSize: 32, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1 }}>Insights</div>
+          <div style={{ fontFamily: FONT.ui, fontSize: 14, color: T.mute, marginTop: 6, letterSpacing: '-0.01em' }}>
+            Patterns and tips for your protocol.
+          </div>
+        </div>
+
+        <Hairline style={{ margin: '20px 22px 0' }} />
+
         {/* ── HERO — inverted pattern card ─────────────────────────── */}
-        <div style={{ padding: '18px 16px 0' }}>
-          <Card inverted padding={24} radius={20}>
-            <Eyebrow color="#7a7a7a">Your pattern</Eyebrow>
-            <div style={{ marginTop: 12, fontFamily: FONT.ui, fontSize: 16, lineHeight: 1.55, color: T.inkText }}>
+        <div style={{ padding: '20px 16px 0' }}>
+          <Card inverted padding={20} radius={16}>
+            <Eyebrow color="#7a7a7a">{hasData ? `Your pattern · ${weeklyRows.length} week${weeklyRows.length !== 1 ? 's' : ''}` : 'Your pattern'}</Eyebrow>
+            <div style={{ marginTop: 12, fontFamily: FONT.ui, fontSize: 19, fontWeight: 500, lineHeight: 1.35, color: T.inkText, letterSpacing: '-0.02em' }}>
               {hasData && best ? (
                 <>
-                  On your best week ({best.week})
-                  {best.protein ? <>, protein averaged <span style={{ color: T.accent, fontWeight: 600 }}>{best.protein}g</span></> : null}
-                  {best.calories ? <> and calories stayed around <span style={{ color: T.accent, fontWeight: 600 }}>{best.calories.toLocaleString()} kcal</span></> : null}
-                  {best.activityDays > 0 ? <> with <span style={{ color: T.accent, fontWeight: 600 }}>{best.activityDays} active day{best.activityDays !== 1 ? 's' : ''}</span></> : null}
-                  {best.weightChange !== null ? <> and a weight change of <span style={{ color: T.accent, fontWeight: 600 }}>{best.weightChange > 0 ? '+' : ''}{best.weightChange} kg</span></> : null}.
+                  Your best week pairs{best.activityDays > 0 ? <> <span style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', fontSize: 22, color: T.accent }}>{best.activityDays}+ days</span> active with</> : null}
+                  {best.protein ? <> <span style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', fontSize: 22, color: T.accent }}>~{best.protein}g</span> of protein</> : null}
+                  {best.weightChange !== null ? <> and a <span style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', fontSize: 22, color: T.accent }}>{best.weightChange > 0 ? '+' : ''}{best.weightChange} kg</span> weight change</> : null}.
                 </>
               ) : (
                 'Log consistently for a few weeks and your personal pattern will appear here — showing what your best weeks look like in numbers.'
               )}
             </div>
+            {hasData && best && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 18, paddingTop: 16, borderTop: '1px solid #1f1f1f' }}>
+                {[
+                  best.activityDays > 0 && { l: 'Active days', v: best.activityDays, u: '/7' },
+                  best.protein && { l: 'Avg protein', v: best.protein, u: 'g' },
+                  best.weightChange !== null && { l: 'Weight chg', v: `${best.weightChange > 0 ? '+' : ''}${best.weightChange}`, u: 'kg' },
+                ].filter(Boolean).slice(0, 3).map(s => (
+                  <div key={s.l}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 9, color: '#7a7a7a', letterSpacing: '0.1em' }}>{s.l.toUpperCase()}</div>
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 3 }}>
+                      <span style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', fontSize: 24, color: T.inkText, letterSpacing: '-0.02em' }}>{s.v}</span>
+                      <span style={{ fontFamily: FONT.mono, fontSize: 10, color: '#7a7a7a', letterSpacing: '0.06em' }}>{s.u}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
-
-        {/* ── Header ───────────────────────────────────────────────── */}
-        <div style={{ padding: '22px 22px 0' }}>
-          <div style={{ fontFamily: FONT.ui, fontSize: 32, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1 }}>Insights</div>
-          <div style={{ fontFamily: FONT.ui, fontSize: 14, color: T.mute, marginTop: 6 }}>
-            {hasData ? `Based on your last ${weeklyRows.length} week${weeklyRows.length !== 1 ? 's' : ''}` : 'Keep logging to unlock insights'}
-          </div>
-        </div>
-
-        <Hairline style={{ margin: '18px 22px 0' }} />
 
         {/* ── Insight tip cards ─────────────────────────────────────── */}
         <div style={{ padding: '14px 16px 0' }}>
@@ -238,63 +259,65 @@ export default function Insights({ logs = {}, onNavigate }) {
         </div>
 
         {/* ── Week-by-week ─────────────────────────────────────────── */}
-        <div style={{ padding: '22px 16px 0' }}>
-          <div style={{ padding: '0 6px 12px' }}><Eyebrow>Week by week</Eyebrow></div>
+        <div style={{ padding: '20px 22px 8px' }}>
+          <Eyebrow>Week-by-week</Eyebrow>
+        </div>
+        <div style={{ padding: '0 16px' }}>
           {hasData ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {weeklyRows.map(row => (
-                <Card key={row.week} padding={16} radius={14} style={{ border: row.best ? `1px solid ${T.accent}` : `1px solid ${T.hair}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <Eyebrow>{row.week}</Eyebrow>
-                    {row.best && (
-                      <span style={{
-                        fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.1em',
-                        background: T.accentSoft, color: T.accentDark,
-                        padding: '3px 8px', borderRadius: 100,
-                      }}>BEST WEEK</span>
-                    )}
+            <Card padding={0} radius={14}>
+              {weeklyRows.map((row, i, arr) => (
+                <div key={row.week} style={{
+                  display: 'flex', alignItems: 'center', padding: '14px 16px',
+                  borderBottom: i === arr.length - 1 ? 'none' : `1px solid ${T.hair}`,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {i === 0 ? 'This week' : `Week ${arr.length - i}`}
+                      {row.best && (
+                        <span style={{
+                          fontFamily: FONT.mono, fontSize: 8, letterSpacing: '0.08em',
+                          background: T.accentSoft, color: T.accentDark,
+                          padding: '2px 6px', borderRadius: 100,
+                        }}>BEST</span>
+                      )}
+                    </div>
+                    <div style={{
+                      display: 'flex', gap: 8, alignItems: 'center',
+                      fontFamily: FONT.mono, fontSize: 10, color: T.mute,
+                      letterSpacing: '0.06em', marginTop: 4,
+                    }}>
+                      <span>{row.week.toUpperCase()}</span>
+                      {/* mini log-day dots */}
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        {Array.from({ length: 7 }).map((_, k) => (
+                          <div key={k} style={{
+                            width: 4, height: 4, borderRadius: 2,
+                            background: k < row.logsCount ? T.accent : T.hair2,
+                          }} />
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {row.calories && (
-                      <div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>CALORIES</div>
-                        <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, marginTop: 2 }}>{row.calories.toLocaleString()}</div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em' }}>kcal avg</div>
+                  <div style={{ textAlign: 'right' }}>
+                    {row.latestWeight !== null && (
+                      <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+                        {row.latestWeight} <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>KG</span>
+                      </div>
+                    )}
+                    {row.weightChange !== null && (
+                      <div style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.06em', marginTop: 2, fontWeight: 600, color: row.weightChange <= 0 ? T.accentDark : T.text }}>
+                        {row.weightChange > 0 ? '+' : ''}{row.weightChange.toFixed(1)} kg
                       </div>
                     )}
                     {row.protein && (
-                      <div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>PROTEIN</div>
-                        <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, marginTop: 2 }}>{row.protein}g</div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em' }}>per day</div>
-                      </div>
-                    )}
-                    {row.activityDays > 0 && (
-                      <div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>ACTIVITY</div>
-                        <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, marginTop: 2 }}>{row.activityMin}</div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em' }}>{row.activityDays} days · min</div>
+                      <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.06em', marginTop: 2 }}>
+                        {row.protein}g protein avg
                       </div>
                     )}
                   </div>
-                  {row.weightChange !== null && (
-                    <>
-                      <Hairline style={{ margin: '12px 0 10px' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Eyebrow style={{ fontSize: 9 }}>Weight change</Eyebrow>
-                        <span style={{
-                          fontFamily: FONT.mono, fontSize: 11, fontWeight: 600,
-                          color: row.weightChange < 0 ? T.accentDark : row.weightChange > 0 ? T.text : T.mute,
-                          letterSpacing: '0.04em',
-                        }}>
-                          {row.weightChange > 0 ? '+' : ''}{row.weightChange.toFixed(1)} kg
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </Card>
+                </div>
               ))}
-            </div>
+            </Card>
           ) : (
             <Card padding={24} radius={14}>
               <div style={{ textAlign: 'center' }}>

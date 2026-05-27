@@ -54,14 +54,99 @@ function NumberInput({ value, onChange, placeholder }) {
   )
 }
 
-// ── Shape silhouette ─────────────────────────────────────────────────────────
-//
-// Builds a single closed SVG path tracing:
-//   right neck → right shoulder → right chest → waist → right hip →
-//   right outer leg (down) → right foot → right inner leg (up) → crotch →
-//   left inner leg (down) → left foot → left outer leg (up) →
-//   left hip → waist → left chest → left shoulder → left neck → Z
-//
+// ── Wireframe body silhouette — stroke-only "body scan" style ────────────────
+// Three views: female front, male front, profile (side). Seafoam accent stroke.
+// viewBox: 200 × 500.
+function WireframeSilhouette({ view = 'female', color, opacity = 1, style = {} }) {
+  const c   = color || T.accent
+  const w   = 1.5    // outline stroke
+  const g   = 0.8    // contour ring stroke
+  const gOp = 0.55   // contour opacity
+  const cOp = 0.32   // centerline opacity
+
+  const Head = ({ cx, cy, r }) => (
+    <>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={c} strokeWidth={w} />
+      <ellipse cx={cx} cy={cy + 1} rx={r} ry={r * 0.32} fill="none" stroke={c} strokeWidth={g} opacity={gOp} />
+      <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} stroke={c} strokeWidth={g} opacity={cOp} />
+    </>
+  )
+
+  let figure = null
+
+  if (view === 'female') {
+    figure = (
+      <>
+        <Head cx={100} cy={42} r={22} />
+        <path d="M 90 64 L 87 84 M 110 64 L 113 84" stroke={c} strokeWidth={w} fill="none" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 87 84 C 74 86 64 92 60 102 C 56 118 58 138 62 156 C 66 175 70 192 74 208 C 70 220 70 232 74 244 C 78 258 82 270 84 282 C 86 294 86 306 88 318 L 112 318 C 114 306 114 294 116 282 C 118 270 122 258 126 244 C 130 232 130 220 126 208 C 130 192 134 175 138 156 C 142 138 144 118 140 102 C 136 92 126 86 113 84" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 60 102 C 50 116 46 138 48 162 C 50 188 56 215 60 240 C 58 252 60 264 64 270 Q 70 274 76 270 C 76 262 72 250 70 238 C 66 215 64 188 66 162 C 66 138 68 116 70 102" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 140 102 C 150 116 154 138 152 162 C 150 188 144 215 140 240 C 142 252 140 264 136 270 Q 130 274 124 270 C 124 262 128 250 130 238 C 134 215 136 188 134 162 C 134 138 132 116 130 102" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 88 318 C 84 348 80 388 78 428 C 76 448 76 466 78 478 L 82 488 L 76 492 L 76 496 L 94 496 L 96 488 L 98 466 C 100 432 100 392 100 360" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 112 318 C 116 348 120 388 122 428 C 124 448 124 466 122 478 L 118 488 L 124 492 L 124 496 L 106 496 L 104 488 L 102 466 C 100 432 100 392 100 360" />
+        <g stroke={c} strokeWidth={g} opacity={gOp} fill="none">
+          <path d="M 60 102 Q 100 95 140 102" /><path d="M 56 125 Q 100 135 144 125" />
+          <path d="M 60 156 Q 100 165 140 156" /><path d="M 68 190 Q 100 198 132 190" />
+          <path d="M 74 220 Q 100 226 126 220" /><path d="M 78 260 Q 100 266 122 260" />
+          <path d="M 80 305 Q 100 312 120 305" /><path d="M 80 360 Q 92 365 96 360" />
+          <path d="M 104 360 Q 108 365 120 360" /><path d="M 80 420 Q 90 424 94 420" />
+          <path d="M 106 420 Q 110 424 120 420" /><path d="M 78 470 Q 88 474 92 470" />
+          <path d="M 108 470 Q 112 474 122 470" />
+        </g>
+        <line x1="100" y1="62" x2="100" y2="318" stroke={c} strokeWidth={g} opacity={cOp} />
+      </>
+    )
+  } else if (view === 'male') {
+    figure = (
+      <>
+        <Head cx={100} cy={42} r={24} />
+        <path d="M 88 66 L 84 86 M 112 66 L 116 86" stroke={c} strokeWidth={w} fill="none" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 84 86 C 66 88 52 96 46 110 C 42 130 46 155 52 178 C 58 200 64 220 70 240 C 72 254 74 268 76 282 C 80 296 82 308 84 320 L 116 320 C 118 308 120 296 124 282 C 126 268 128 254 130 240 C 136 220 142 200 148 178 C 154 155 158 130 154 110 C 148 96 134 88 116 86" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 46 110 C 36 130 32 158 36 188 C 40 215 46 240 48 262 C 46 272 48 282 52 286 Q 58 290 64 285 C 64 274 60 258 58 242 C 54 218 54 188 58 162 C 60 138 64 118 66 108" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 154 110 C 164 130 168 158 164 188 C 160 215 154 240 152 262 C 154 272 152 282 148 286 Q 142 290 136 285 C 136 274 140 258 142 242 C 146 218 146 188 142 162 C 140 138 136 118 134 108" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 84 320 C 80 355 76 400 76 440 C 76 460 78 478 80 488 L 82 496 L 76 498 L 76 502 L 94 502 L 96 494 L 98 470 C 100 432 100 392 100 360" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 116 320 C 120 355 124 400 124 440 C 124 460 122 478 120 488 L 118 496 L 124 498 L 124 502 L 106 502 L 104 494 L 102 470 C 100 432 100 392 100 360" />
+        <g stroke={c} strokeWidth={g} opacity={gOp} fill="none">
+          <path d="M 50 110 Q 100 100 150 110" /><path d="M 46 138 Q 100 150 154 138" />
+          <path d="M 52 168 Q 100 178 148 168" /><path d="M 60 200 Q 100 208 140 200" />
+          <path d="M 66 232 Q 100 240 134 232" /><path d="M 74 266 Q 100 272 126 266" />
+          <path d="M 80 305 Q 100 312 120 305" /><path d="M 78 360 Q 92 365 96 360" />
+          <path d="M 104 360 Q 108 365 122 360" /><path d="M 78 425 Q 90 430 94 425" />
+          <path d="M 106 425 Q 110 430 122 425" /><path d="M 76 478 Q 88 482 92 478" />
+          <path d="M 108 478 Q 112 482 124 478" />
+        </g>
+        <line x1="100" y1="64" x2="100" y2="320" stroke={c} strokeWidth={g} opacity={cOp} />
+      </>
+    )
+  } else {
+    // profile (side view)
+    figure = (
+      <>
+        <Head cx={88} cy={42} r={22} />
+        <path d="M 80 62 C 78 70 80 78 86 84 M 94 62 C 96 70 96 78 96 84" stroke={c} strokeWidth={w} fill="none" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 86 84 C 74 94 68 110 70 130 C 74 152 80 175 80 195 C 80 215 76 232 78 250 C 80 268 84 285 86 305 L 86 320 L 116 320 L 116 305 C 116 285 118 268 120 250 C 122 232 122 215 122 195 C 122 175 118 152 114 132 C 110 115 108 100 102 92 C 98 86 92 84 86 84" />
+        <path stroke={c} strokeWidth={w} fill="none" d="M 86 320 C 82 360 78 405 78 445 C 78 465 80 480 82 490 L 80 498 L 74 500 L 80 504 L 94 504 L 96 494 L 98 470 C 100 432 102 390 100 360" />
+        <path stroke={c} strokeWidth={w} fill="none" opacity="0.65" d="M 116 320 C 118 360 120 405 122 445 C 122 465 120 480 118 490 L 120 498 L 126 500 L 120 504 L 106 504 L 104 494 L 102 470 C 100 432 100 390 100 360" />
+        <g stroke={c} strokeWidth={g} opacity={gOp} fill="none">
+          <path d="M 70 108 Q 100 102 124 110" /><path d="M 70 135 Q 100 128 122 138" />
+          <path d="M 72 165 Q 100 158 122 168" /><path d="M 76 200 Q 100 194 124 202" />
+          <path d="M 80 235 Q 100 230 122 238" /><path d="M 82 275 Q 100 270 118 278" />
+          <path d="M 80 308 Q 100 302 118 310" /><path d="M 80 365 Q 90 360 100 366" />
+          <path d="M 80 430 Q 92 426 100 432" /><path d="M 80 478 Q 90 474 100 480" />
+        </g>
+        <line x1="100" y1="64" x2="100" y2="320" stroke={c} strokeWidth={g} opacity={cOp} />
+      </>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 200 500" width="100%" height="100%" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      {figure}
+    </svg>
+  )
+}
+
+// ── Legacy parametric silhouette (kept for measurements card) ─────────────────
 function buildSilhouette(m, sex) {
   const def = sex === 'male'
     ? { chest: 98, waist: 88, hips: 94, thighs: 57 }
@@ -403,49 +488,65 @@ export default function Measurements({ measurements, onUpdateMeasurements, onNav
                 <span className={styles.cardTitle}>Shape Progress Preview</span>
               </div>
 
-              <div className={styles.sexToggle}>
+              {/* View toggle: female / male / profile */}
+              <div style={{ display: 'flex', gap: 6, padding: '0 2px 8px' }}>
                 {[
-                  { val: 'female', label: 'Female' },
-                  { val: 'male',   label: 'Male'   },
-                  { val: 'any',    label: 'Prefer not to say' },
-                ].map(({ val, label }) => (
-                  <button
-                    key={val}
-                    type="button"
-                    className={`${styles.sexBtn} ${shapePreference === val ? styles.sexBtnActive : ''}`}
-                    onClick={() => setShapePreference(val)}
-                  >{label}</button>
-                ))}
+                  { val: 'female',  label: 'Female'  },
+                  { val: 'male',    label: 'Male'     },
+                  { val: 'profile', label: 'Profile'  },
+                ].map(({ val, label }) => {
+                  const on = shapePreference === val
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setShapePreference(val)}
+                      style={{
+                        flex: 1, padding: '10px 8px', borderRadius: 10,
+                        border: `1px solid ${on ? T.ink : T.hair}`,
+                        background: on ? T.card : '#F3F2EE',
+                        color: T.text, cursor: 'pointer',
+                        fontFamily: FONT.ui, fontSize: 13,
+                        fontWeight: on ? 700 : 500, letterSpacing: '-0.01em',
+                      }}
+                    >{label}</button>
+                  )
+                })}
               </div>
 
-              <div className={styles.silhouettePair}>
-                {first && first.id !== latest.id ? (
-                  <>
-                    <ShapeSilhouette
-                      entry={first}
-                      sex={shapePreference}
-                      accent={false}
-                      label="Start"
-                      date={formatDate(first.date, { month: 'short', year: 'numeric' })}
-                    />
-                    <ShapeSilhouette
-                      entry={latest}
-                      sex={shapePreference}
-                      accent={true}
-                      label="Latest"
-                      date={formatDate(latest.date, { month: 'short', year: 'numeric' })}
-                    />
-                  </>
-                ) : (
-                  <ShapeSilhouette
-                    entry={latest}
-                    sex={shapePreference}
-                    accent={true}
-                    label="Current"
-                    date={formatDate(latest.date, { month: 'short', year: 'numeric' })}
-                  />
-                )}
-              </div>
+              {/* Wireframe silhouette(s) */}
+              {first && first.id !== latest.id ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', alignItems: 'stretch', paddingBottom: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 8px 12px' }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>
+                      START · {formatDate(first.date, { month: 'short', year: 'numeric' }).toUpperCase()}
+                    </div>
+                    <div style={{ width: 90, height: 200 }}>
+                      <WireframeSilhouette view={shapePreference} color={T.faint} />
+                    </div>
+                  </div>
+                  <div style={{ background: T.hair, margin: '20px 0' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 8px 12px' }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.text, letterSpacing: '0.12em', marginBottom: 6, fontWeight: 600 }}>
+                      NOW · {formatDate(latest.date, { month: 'short', year: 'numeric' }).toUpperCase()}
+                    </div>
+                    <div style={{ width: 90, height: 200 }}>
+                      <WireframeSilhouette view={shapePreference} color={T.accent} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.text, letterSpacing: '0.12em', fontWeight: 600 }}>
+                      CURRENT · {formatDate(latest.date, { month: 'short', year: 'numeric' }).toUpperCase()}
+                    </div>
+                    <div style={{ width: 110, height: 230 }}>
+                      <WireframeSilhouette view={shapePreference} color={T.accent} />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <p className={styles.previewDisclaimer}>
                 This preview is a simplified visual aid based on your measurements. It is not an exact body model.

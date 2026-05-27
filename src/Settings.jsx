@@ -175,20 +175,45 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
 
             <div className={styles.fieldGroup}>
               <label className={styles.label}>Goal type</label>
-              <div className={styles.toggle}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {[
-                  { value: 'lose', label: 'Lose fat' },
-                  { value: 'gain', label: 'Gain / build muscle' },
-                ].map(o => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    className={`${styles.toggleBtn} ${goalType === o.value ? styles.toggleBtnActive : ''}`}
-                    onClick={() => setGoalType(o.value)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
+                  { id: 'lose', label: 'Lose weight',  sub: 'Body recomposition', d: 'M6 9l6 6 6-6' },
+                  { id: 'gain', label: 'Build muscle',  sub: 'Gain · lean mass',   d: 'M6 15l6-6 6 6' },
+                ].map(g => {
+                  const on = goalType === g.id
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setGoalType(g.id)}
+                      style={{
+                        padding: '14px', textAlign: 'left', cursor: 'pointer',
+                        background: on ? T.ink : T.card,
+                        color: on ? T.inkText : T.text,
+                        border: `1px solid ${on ? T.ink : T.hair}`,
+                        borderRadius: 14, fontFamily: FONT.ui,
+                        display: 'flex', alignItems: 'center', gap: 12,
+                      }}
+                    >
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 14,
+                        background: on ? '#1a1a1a' : '#F3F2EE',
+                        border: on ? '1px solid #2a2a2a' : 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d={g.d}/>
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{g.label}</div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.08em', opacity: 0.65, marginTop: 2, textTransform: 'uppercase' }}>{g.sub}</div>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

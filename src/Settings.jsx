@@ -77,38 +77,6 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
 
         <div className={styles.scrollContent}>
 
-          {/* ── Appearance ───────────────────────────────────────── */}
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Appearance</h2>
-            <div className={styles.themeGrid}>
-              <button
-                className={`${styles.themeOption} ${theme === 'light' ? styles.themeOptionActive : ''}`}
-                onClick={() => onThemeChange('light')}
-              >
-                <div className={styles.themePreviewLight}>
-                  <div className={styles.previewBar} />
-                  <div className={styles.previewCardLight} />
-                  <div className={styles.previewCardLight} style={{ width: '60%' }} />
-                </div>
-                <span className={styles.themeLabel}>Light</span>
-                {theme === 'light' && <span className={styles.themeCheck}>✓</span>}
-              </button>
-
-              <button
-                className={`${styles.themeOption} ${theme === 'dark' ? styles.themeOptionActive : ''}`}
-                onClick={() => onThemeChange('dark')}
-              >
-                <div className={styles.themePreviewDark}>
-                  <div className={styles.previewBarDark} />
-                  <div className={styles.previewCardDark} />
-                  <div className={styles.previewCardDark} style={{ width: '60%' }} />
-                </div>
-                <span className={styles.themeLabel}>Dark</span>
-                {theme === 'dark' && <span className={styles.themeCheck}>✓</span>}
-              </button>
-            </div>
-          </section>
-
           {/* ── Profile ──────────────────────────────────────────── */}
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Profile</h2>

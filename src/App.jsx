@@ -57,13 +57,28 @@ export default function App() {
 
   if (!onboarded) return <Onboarding onComplete={handleOnboardingComplete} />
 
+  // Map tab bar IDs + legacy screen names to internal screen keys
+  function handleNav(tab) {
+    const map = {
+      home:         'dashboard',
+      log:          'log',
+      insights:     'insights',
+      charts:       'charts',
+      profile:      'settings',
+      settings:     'settings',
+      dashboard:    'dashboard',
+      measurements: 'measurements',
+    }
+    setScreen(map[tab] ?? tab)
+  }
+
   const screenEl = (() => {
-    if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} onNavigate={setScreen} />
-    if (screen === 'insights')     return <Insights logs={logs} onNavigate={setScreen} />
-    if (screen === 'charts')       return <Suspense fallback={null}><Charts theme={theme} onNavigate={setScreen} /></Suspense>
-    if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} theme={theme} onThemeChange={setTheme} onNavigate={setScreen} />
-    if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} onNavigate={setScreen} />
-    return <Dashboard logs={logs} userSettings={userSettings} onNavigate={setScreen} />
+    if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} onNavigate={handleNav} />
+    if (screen === 'insights')     return <Insights logs={logs} onNavigate={handleNav} />
+    if (screen === 'charts')       return <Suspense fallback={null}><Charts onNavigate={handleNav} /></Suspense>
+    if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} theme={theme} onThemeChange={setTheme} onNavigate={handleNav} />
+    if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} onNavigate={handleNav} />
+    return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} />
   })()
 
   return <div key={screen} className="screen-transition">{screenEl}</div>

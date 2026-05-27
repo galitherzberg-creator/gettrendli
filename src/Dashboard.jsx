@@ -1,57 +1,8 @@
 import { useState, useRef } from 'react'
 import { computeWeeklyData, getWeekLabel, todayISO, formatDate, isoDate } from './logStore'
-import styles from './Dashboard.module.css'
-import TipBanner, { useTip } from './TipBanner'
+import { T, FONT, Eyebrow, Hairline, Card, BigNumber, TabBar } from './tokens'
 
-const MOOD_MAP = {
-  great:         { label: 'Great',        icon: '😊' },
-  good:          { label: 'Good',         icon: '🙂' },
-  nauseous:      { label: 'Nauseous',     icon: '🤢' },
-  tired:         { label: 'Tired',        icon: '😴' },
-  'low-appetite':{ label: 'Low appetite', icon: '🍽️' },
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function WeightChange({ current, previous, goalType = 'lose' }) {
-  if (!previous) return null
-  const diff = parseFloat((parseFloat(current) - parseFloat(previous)).toFixed(1))
-  const isZero = diff === 0
-  const isGood = goalType === 'gain' ? diff > 0 : diff < 0
-  return (
-    <span className={`${styles.weightBadge} ${isGood ? styles.weightBadgeGood : isZero ? styles.weightBadgeNeutral : styles.weightBadgeUp}`}>
-      {diff > 0 ? '+' : ''}{diff} kg {isZero ? 'no change' : 'from last entry'}
-    </span>
-  )
-}
-
-// Today section — shows actual logged values, not checkboxes
-function TodayMetric({ label, primary, secondary, logged }) {
-  return (
-    <div className={styles.todayMetric}>
-      <span className={styles.todayMetricLabel}>{label}</span>
-      <span className={logged ? styles.todayMetricPrimary : styles.todayMetricEmpty}>
-        {logged ? primary : '—'}
-      </span>
-      {logged && secondary && (
-        <span className={styles.todayMetricSecondary}>{secondary}</span>
-      )}
-    </div>
-  )
-}
-
-// Weekly section — smaller cards, aggregated averages
-function SnapshotCard({ label, value, sub }) {
-  return (
-    <div className={styles.snapshotCard}>
-      <span className={styles.snapshotLabel}>{label}</span>
-      <span className={styles.snapshotValue}>{value ?? '—'}</span>
-      {sub && <span className={styles.snapshotSub}>{sub}</span>}
-    </div>
-  )
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Computation helpers (unchanged) ──────────────────────────────────────────
 
 function computeStreak(logs) {
   let streak = 0
@@ -86,7 +37,7 @@ function computeSideEffectTrends(logs) {
   if (!all.size) return []
   return Array.from(all).map(se => ({
     key: se,
-    label: se.charAt(0).toUpperCase() + se.slice(1).replace('-', '. '),
+    label: se.charAt(0).toUpperCase() + se.slice(1).replace('-', ' '),
     thisWeek: thisWeek[se] || 0,
     lastWeek: lastWeek[se] || 0,
   })).sort((a, b) => b.thisWeek - a.thisWeek)
@@ -98,43 +49,6 @@ function computeDoseHistory(logs) {
     .sort(([a], [b]) => b.localeCompare(a))
     .slice(0, 6)
     .map(([, v]) => ({ date: v.injectionDate, dose: v.dose }))
-}
-
-function computeInsight(logs, goalType, proteinGoal) {
-  const hasData = Object.values(logs).some(e => e.calories || e.protein || e.weight)
-  if (!hasData) return "Start logging daily to unlock personalised insights based on your own data."
-
-  const thisWeekProt = []
-  for (let i = 0; i <= 6; i++) {
-    const p = logs[isoDate(i)]?.protein
-    if (p) thisWeekProt.push(parseFloat(p))
-  }
-  const avgProt = thisWeekProt.length
-    ? Math.round(thisWeekProt.reduce((a, b) => a + b, 0) / thisWeekProt.length)
-    : null
-
-  if (avgProt && proteinGoal) {
-    if (avgProt >= proteinGoal * 0.9)
-      return `Protein is on track this week — avg ${avgProt}g vs your ${proteinGoal}g goal. Keep it up to support your ${goalType === 'gain' ? 'muscle building' : 'muscle preservation'} progress.`
-    if (avgProt < proteinGoal * 0.75)
-      return `Protein is below target this week (avg ${avgProt}g vs ${proteinGoal}g goal). Try adding a high-protein meal or snack to close the gap.`
-  }
-
-  let streak = 0
-  for (let i = 0; i < 365; i++) {
-    const e = logs[isoDate(i)]
-    if (!e || (!e.calories && !e.protein && !e.weight)) break
-    streak++
-  }
-  if (streak >= 5) return `You're on a ${streak}-day logging streak — great consistency. The more complete your data, the more accurate your weekly trends become.`
-
-  return "Keep logging consistently — the more data you add, the more accurate your insights and projections become."
-}
-
-function computeBMI(weightKg, heightCm) {
-  if (!weightKg || !heightCm) return null
-  const m = heightCm / 100
-  return (parseFloat(weightKg) / (m * m)).toFixed(1)
 }
 
 function computeNextInjection(logs, userSettings) {
@@ -155,13 +69,11 @@ function computeNextInjection(logs, userSettings) {
 }
 
 function computeWeeklySummary(logs, goalType, proteinGoal) {
-  // This week (last 7 days)
   const thisWeek = []
   for (let i = 0; i <= 6; i++) {
     const d = isoDate(i)
     if (logs[d]) thisWeek.push({ ...logs[d], date: d })
   }
-  // Last week (7–13 days ago) — for weight comparison
   const lastWeekWeights = []
   for (let i = 7; i <= 13; i++) {
     const d = isoDate(i)
@@ -174,17 +86,16 @@ function computeWeeklySummary(logs, goalType, proteinGoal) {
     ? parseFloat((weightNow - weightThen).toFixed(1))
     : null
 
-  const daysLogged      = thisWeek.filter(e => e.calories || e.protein || e.weight || e.activityDuration).length
+  const daysLogged       = thisWeek.filter(e => e.calories || e.protein || e.weight || e.activityDuration).length
   const activitySessions = thisWeek.filter(e => e.activityDuration).length
-  const proteinEntries  = thisWeek.filter(e => e.protein)
-  const avgProtein      = proteinEntries.length
+  const proteinEntries   = thisWeek.filter(e => e.protein)
+  const avgProtein       = proteinEntries.length
     ? Math.round(proteinEntries.reduce((s, e) => s + parseFloat(e.protein), 0) / proteinEntries.length)
     : null
-  const proteinGoalDays = proteinGoal && proteinEntries.length
+  const proteinGoalDays  = proteinGoal && proteinEntries.length
     ? proteinEntries.filter(e => parseFloat(e.protein) >= proteinGoal).length
     : null
 
-  // Generate headline sentence
   const parts = []
   if (weightDelta !== null) {
     const direction = goalType === 'gain'
@@ -193,10 +104,8 @@ function computeWeeklySummary(logs, goalType, proteinGoal) {
     parts.push(direction)
   }
   if (daysLogged > 0) parts.push(`logged ${daysLogged} day${daysLogged !== 1 ? 's' : ''}`)
-  if (avgProtein)      parts.push(`averaged ${avgProtein}g protein`)
-  const headline = parts.length
-    ? `You ${parts.join(', ')}.`
-    : 'Keep logging to see your weekly recap.'
+  if (avgProtein)     parts.push(`averaged ${avgProtein}g protein`)
+  const headline = parts.length ? `You ${parts.join(', ')}.` : 'Keep logging to see your weekly recap.'
 
   return { weightDelta, daysLogged, activitySessions, avgProtein, proteinGoalDays, headline }
 }
@@ -211,8 +120,8 @@ function computeProjection(logs, goalWeight, goalType = 'lose') {
   const days = (new Date(lastDate) - new Date(firstDate)) / 86400000
   if (days <= 0) return null
   const delta = goalType === 'gain'
-    ? parseFloat(lastEntry.weight) - parseFloat(firstEntry.weight)   // gained
-    : parseFloat(firstEntry.weight) - parseFloat(lastEntry.weight)   // lost
+    ? parseFloat(lastEntry.weight) - parseFloat(firstEntry.weight)
+    : parseFloat(firstEntry.weight) - parseFloat(lastEntry.weight)
   if (delta <= 0) return null
   const ratePerDay = delta / days
   const remaining  = goalType === 'gain'
@@ -225,16 +134,16 @@ function computeProjection(logs, goalWeight, goalType = 'lose') {
   return target.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
+// ── Component ────────────────────────────────────────────────────────────────
+
 const PULL_THRESHOLD = 62
 
 export default function Dashboard({ logs, userSettings, onNavigate }) {
   const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null } = userSettings
 
-  // Pull-to-refresh
-  const [pullY, setPullY]         = useState(0)
+  const [pullY, setPullY]           = useState(0)
   const [refreshing, setRefreshing] = useState(false)
-  const touchStartY               = useRef(0)
-  const tip                       = useTip('dashboard')
+  const touchStartY                 = useRef(0)
 
   function onTouchStart(e) {
     if (window.scrollY <= 0) touchStartY.current = e.touches[0].clientY
@@ -254,26 +163,19 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
       touchStartY.current = 0
     }
   }
-  const insightText = computeInsight(logs, goalType, proteinGoal)
-  const weekLabel = getWeekLabel()
 
-  const {
-    avgCalories, avgProtein, totalActivityMin, activityDays,
-    lastInjection, latestWeight, prevWeight,
-  } = computeWeeklyData(logs)
+  const { avgCalories, avgProtein: weeklyAvgProt, totalActivityMin, activityDays, lastInjection, latestWeight, prevWeight } = computeWeeklyData(logs)
 
-  const todayLog    = logs[todayISO] || {}
-  const hasCalories = !!todayLog.calories
-  const hasProtein  = !!todayLog.protein
-  const hasActivity = !!todayLog.activityDuration
-  const hasInjection = !!todayLog.dose
-  const loggedCount = [hasCalories, hasProtein, hasActivity, hasInjection].filter(Boolean).length
+  const todayLog      = logs[todayISO] || {}
+  const hasCalories   = !!todayLog.calories
+  const hasProtein    = !!todayLog.protein
+  const hasActivity   = !!todayLog.activityDuration
+  const hasInjection  = !!todayLog.dose
+  const hasMood       = !!todayLog.mood
+  const loggedCount   = [hasCalories, hasProtein, todayLog.weight, hasActivity].filter(Boolean).length
+  const todayWater    = todayLog.water || 0
 
-  const lastInjectionLabel = lastInjection?.injectionDate
-    ? formatDate(lastInjection.injectionDate, { month: 'short', day: 'numeric' })
-    : null
-
-  // Direction-aware goal progress
+  // Goal progress
   const goalProgress = latestWeight && startWeight && goalWeight && startWeight !== goalWeight
     ? goalType === 'gain'
       ? Math.min(100, Math.max(0, ((latestWeight - startWeight) / (goalWeight - startWeight)) * 100))
@@ -285,399 +187,457 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
       : Math.max(0, latestWeight - goalWeight).toFixed(1)
     : null
 
-  // Protein goal progress (optional)
-  const proteinPct = proteinGoal && todayLog.protein
+  const proteinPct    = proteinGoal && todayLog.protein
     ? Math.min(100, Math.round((todayLog.protein / proteinGoal) * 100))
     : null
 
-  const bmi             = computeBMI(latestWeight, height)
-  const projectedDate   = computeProjection(logs, goalWeight, goalType)
-  const nextInj         = computeNextInjection(logs, userSettings)
-  const weeklySummary   = computeWeeklySummary(logs, goalType, proteinGoal)
-  const streak          = computeStreak(logs)
-  const sideEffects     = computeSideEffectTrends(logs)
-  const doseHistory     = computeDoseHistory(logs)
-  const todayWater      = todayLog.water || 0
+  const streak        = computeStreak(logs)
+  const nextInj       = computeNextInjection(logs, userSettings)
+  const weeklySummary = computeWeeklySummary(logs, goalType, proteinGoal)
+  const sideEffects   = computeSideEffectTrends(logs)
+  const doseHistory   = computeDoseHistory(logs)
+  const projectedDate = computeProjection(logs, goalWeight, goalType)
+
+  // Today's date display
+  const todayDisplay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const firstName    = name ? name.split(' ')[0] : 'there'
+
+  // Inline today log rows
+  const todayRows = [
+    { label: 'Weight',   val: todayLog.weight ? `${todayLog.weight} kg`   : 'Log now', done: !!todayLog.weight },
+    { label: 'Calories', val: hasCalories      ? `${Number(todayLog.calories).toLocaleString()} kcal` : 'Log now', done: hasCalories },
+    { label: 'Protein',  val: hasProtein        ? `${todayLog.protein} g`   : 'Log now', done: hasProtein },
+    { label: 'Workout',  val: hasActivity       ? `${todayLog.activityType || 'Activity'} · ${todayLog.activityDuration} min` : 'Log now', done: hasActivity },
+    { label: 'Injection',val: hasInjection      ? `${Number(todayLog.dose).toFixed(2)} mg` : 'Log now', done: hasInjection },
+  ]
 
   return (
-    <div className={styles.shell} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-
-      {/* Pull-to-refresh indicator */}
+    <div
+      style={{ minHeight: '100dvh', background: T.bg, fontFamily: FONT.ui }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Pull refresh indicator */}
       {(pullY > 0 || refreshing) && (
-        <div className={styles.pullWrap} style={{ height: refreshing ? PULL_THRESHOLD : pullY, opacity: refreshing ? 1 : pullY / PULL_THRESHOLD }}>
-          <svg className={`${styles.pullIcon} ${refreshing ? styles.pullSpin : ''}`} width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M15 9A6 6 0 1 1 9 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-            <path d="M9 1l2.5 2L9 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        <div style={{
+          height: refreshing ? PULL_THRESHOLD : pullY,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          opacity: refreshing ? 1 : pullY / PULL_THRESHOLD,
+          overflow: 'hidden', transition: refreshing ? 'none' : 'opacity 0.1s',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"
+            style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}>
+            <path d="M15 9A6 6 0 1 1 9 3" stroke={T.accent} strokeWidth="1.6" strokeLinecap="round"/>
+            <path d="M9 1l2.5 2L9 5" stroke={T.accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          {refreshing && <span className={styles.pullText}>Updated</span>}
+          {refreshing && <span style={{ fontFamily: FONT.mono, fontSize: 11, color: T.mute, letterSpacing: '0.1em' }}>UPDATED</span>}
         </div>
       )}
 
-      <div className={styles.page}>
+      <div style={{ maxWidth: 430, margin: '0 auto', paddingBottom: 100 }}>
 
-        {/* ── Tip banner ──────────────────────────────────────────── */}
-        {tip.visible && (
-          <TipBanner
-            text="Tap + to log today's weight, nutrition, and mood. The more you log, the smarter your insights get."
-            onDismiss={tip.dismiss}
-          />
-        )}
+        {/* ── Header ───────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 14px' }}>
+          <div>
+            <Eyebrow>{todayDisplay}</Eyebrow>
+            <div style={{ fontFamily: FONT.ui, fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em', marginTop: 4 }}>
+              Morning, {firstName}.
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('settings')}
+            style={{
+              width: 36, height: 36, borderRadius: 18,
+              border: `1px solid ${T.hair}`, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', cursor: 'pointer',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </button>
+        </div>
 
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <header className={styles.header}>
-          <div className={styles.headerTop}>
-            <div>
-              <p className={styles.greeting}>Hey, {name}</p>
-              <div className={styles.headerMeta}>
-                <p className={styles.weekLabel}>Week of {weekLabel}</p>
-                {streak > 0 && (
-                  <span className={styles.streakBadge}>
-                    {streak} day streak
-                  </span>
+        {/* ── HERO — black weight card ──────────────────────────────── */}
+        <div style={{ padding: '0 16px' }}>
+          <Card inverted padding={0} radius={20} style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '24px 24px 18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Eyebrow color="#7a7a7a">Current Weight</Eyebrow>
+                <span style={{ fontFamily: FONT.mono, fontSize: 10, color: '#7a7a7a', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                  Today
+                </span>
+              </div>
+              <div style={{ marginTop: 14, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <BigNumber value={latestWeight ?? '—'} unit="kg" size={80} color={T.inkText} />
+                {prevWeight && latestWeight && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 11, color: '#a0a0a0', letterSpacing: '0.08em' }}>
+                      {(latestWeight - prevWeight) > 0 ? '+' : ''}{(latestWeight - prevWeight).toFixed(1)} kg
+                    </div>
+                    <div style={{ fontFamily: FONT.ui, fontSize: 11, color: '#7a7a7a', marginTop: 4 }}>from last entry</div>
+                  </div>
                 )}
               </div>
             </div>
-            <button className={styles.avatarBtn} aria-label="Settings">{name[0]}</button>
-          </div>
-        </header>
 
-        {/* ── Weight hero ─────────────────────────────────────────── */}
-        <section className={styles.weightCard}>
-          <p className={styles.weightEyebrow}>Current Weight</p>
-          <div className={styles.weightRow}>
-            <span className={styles.weightValue}>{latestWeight ?? '—'}</span>
-            <span className={styles.weightUnit}>kg</span>
-          </div>
-          {bmi && <p className={styles.bmi}>BMI {bmi}</p>}
-
-          <WeightChange current={latestWeight} previous={prevWeight} goalType={goalType} />
-
-          {goalProgress !== null && (
-            <div className={styles.goalWrap}>
-              <div className={styles.goalBar}>
-                <div className={styles.goalFill} style={{ width: `${goalProgress}%` }} />
-              </div>
-              <p className={styles.goalLabel}>
-                <span className={styles.goalPct}>{Math.round(goalProgress)}%</span>
-                {' '}toward {goalWeight} kg goal · {kgToGo} kg to go
-              </p>
-              {projectedDate && (
-                <p className={styles.projection}>At this pace: ~{projectedDate}</p>
-              )}
+            {/* Sparkline */}
+            <div style={{ padding: '6px 24px 22px' }}>
+              <svg width="100%" height="48" viewBox="0 0 320 48" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="sparkFade" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor={T.accent} stopOpacity="0.45"/>
+                    <stop offset="1" stopColor={T.accent} stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                {(() => {
+                  // Build sparkline from last 9 weight entries
+                  const weightEntries = Object.entries(logs)
+                    .filter(([, v]) => v.weight)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .slice(-9)
+                  if (weightEntries.length < 2) {
+                    // fallback flat line
+                    return (
+                      <>
+                        <path d="M0,24 L320,24 L320,48 L0,48 Z" fill="url(#sparkFade)" opacity="0.3" />
+                        <path d="M0,24 L320,24" fill="none" stroke={T.accent} strokeWidth="1.7" strokeLinecap="round"/>
+                      </>
+                    )
+                  }
+                  const vals = weightEntries.map(([, v]) => parseFloat(v.weight))
+                  const minV = Math.min(...vals), maxV = Math.max(...vals)
+                  const range = maxV - minV || 1
+                  const pts = vals.map((v, i) => {
+                    const x = (i / (vals.length - 1)) * 320
+                    const y = 4 + ((maxV - v) / range) * 38
+                    return { x, y }
+                  })
+                  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+                  const fill = line + ` L${pts[pts.length-1].x},48 L0,48 Z`
+                  return (
+                    <>
+                      <path d={fill} fill="url(#sparkFade)" />
+                      <path d={line} fill="none" stroke={T.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                      {pts.map((p, i) => (
+                        <circle key={i} cx={p.x} cy={p.y}
+                          r={i === pts.length - 1 ? 4 : 2}
+                          fill={T.accent}
+                          stroke={i === pts.length - 1 ? '#fff' : 'none'}
+                          strokeWidth={i === pts.length - 1 ? 1.5 : 0}
+                        />
+                      ))}
+                    </>
+                  )
+                })()}
+              </svg>
             </div>
-          )}
-        </section>
+          </Card>
+        </div>
 
-        {/* ── Injection countdown ─────────────────────────────────── */}
-        {nextInj && (
-          <section className={styles.section} style={{ paddingTop: 12 }}>
-            <div className={`${styles.injBanner} ${nextInj.daysUntil < 0 ? styles.injBannerOverdue : nextInj.daysUntil === 0 ? styles.injBannerToday : ''}`}>
-              <div className={styles.injBannerIcon}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M11.5 2.5l2 2-7 7-3 .5.5-3 7-6.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9.5 4.5l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-              </div>
-              <div className={styles.injBannerText}>
-                <span className={styles.injBannerLabel}>Next injection</span>
-                <span className={styles.injBannerValue}>
-                  {nextInj.daysUntil === 0
-                    ? 'Due today'
-                    : nextInj.daysUntil < 0
-                    ? `${Math.abs(nextInj.daysUntil)} day${Math.abs(nextInj.daysUntil) !== 1 ? 's' : ''} overdue`
-                    : `In ${nextInj.daysUntil} day${nextInj.daysUntil !== 1 ? 's' : ''}`}
-                </span>
+        {/* ── GOAL PROGRESS ────────────────────────────────────────── */}
+        {goalProgress !== null && (
+          <div style={{ padding: '20px 22px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <Eyebrow>Goal Progress</Eyebrow>
+              <div style={{ fontFamily: FONT.mono, fontSize: 11, color: T.text, letterSpacing: '0.08em' }}>
+                <span style={{ fontWeight: 600 }}>{Math.round(goalProgress)}%</span>
+                <span style={{ color: T.faint }}> / 100</span>
               </div>
             </div>
-          </section>
+            <div style={{ position: 'relative', marginTop: 12, height: 8 }}>
+              <div style={{ position: 'absolute', inset: 0, background: T.hair, borderRadius: 4 }} />
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${goalProgress}%`, background: T.accent, borderRadius: 4 }} />
+              <div style={{ position: 'absolute', right: 0, top: -4, width: 1, height: 16, background: T.ink }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.06em' }}>
+              <span>{startWeight} START</span>
+              <span style={{ color: T.text, fontWeight: 600 }}>{latestWeight} NOW</span>
+              <span>{goalWeight} GOAL</span>
+            </div>
+            {kgToGo > 0 && (
+              <div style={{ fontFamily: FONT.ui, fontSize: 12, color: T.mute, marginTop: 6 }}>
+                {kgToGo} kg to go{projectedDate ? ` · on track for ${projectedDate}` : ''}
+              </div>
+            )}
+          </div>
         )}
 
-        {/* ── Today ── primary, above weekly ──────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.todayCard}>
+        {/* ── INJECTION COUNTDOWN + STREAK ─────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: 10, padding: '22px 16px 0' }}>
 
-            <div className={styles.todayCardHeader}>
-              <div>
-                <h2 className={styles.todayCardTitle}>Today</h2>
-                <p className={styles.todayCardDate}>{formatDate(todayISO)}</p>
+          {/* Injection countdown */}
+          <Card padding={0} radius={14} style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '16px 16px 4px' }}>
+              <Eyebrow>Next Injection</Eyebrow>
+            </div>
+            {nextInj ? (
+              <>
+                <div style={{ padding: '6px 16px 14px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                  <BigNumber value={Math.max(0, nextInj.daysUntil)} unit="d" size={44} italic={false} />
+                  {nextInj.daysUntil < 0 && (
+                    <span style={{ fontFamily: FONT.mono, fontSize: 10, color: '#C0392B', letterSpacing: '0.08em' }}>OVERDUE</span>
+                  )}
+                </div>
+                <Hairline />
+                <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontFamily: FONT.ui, fontSize: 13, fontWeight: 500 }}>
+                      {lastInjection?.dose ? `${lastInjection.dose} mg` : 'Set dose'}
+                    </div>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.08em', marginTop: 2 }}>
+                      {nextInj.nextDate}
+                    </div>
+                  </div>
+                  <div style={{ width: 28, height: 28, borderRadius: 14, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '10px 16px 16px' }}>
+                <div style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute }}>Log your first injection to see countdown</div>
               </div>
-              <span className={`${styles.todayBadge} ${loggedCount === 0 ? styles.todayBadgeEmpty : ''}`}>
-                {loggedCount} / 4 logged
-              </span>
-            </div>
+            )}
+          </Card>
 
-            <div className={styles.todayMetricsGrid}>
-              <TodayMetric
-                label="Calories"
-                primary={Number(todayLog.calories).toLocaleString()}
-                secondary="kcal"
-                logged={hasCalories}
-              />
-              <TodayMetric
-                label="Protein"
-                primary={`${todayLog.protein}g`}
-                logged={hasProtein}
-              />
-              <TodayMetric
-                label="Activity"
-                primary={todayLog.activityType}
-                secondary={`${todayLog.activityDuration} min`}
-                logged={hasActivity}
-              />
-              <TodayMetric
-                label="Injection"
-                primary={`${Number(todayLog.dose).toFixed(2)} mg`}
-                logged={hasInjection}
-              />
+          {/* Streak */}
+          <Card padding={16} radius={14}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Eyebrow>Streak</Eyebrow>
             </div>
+            <div style={{ marginTop: 6 }}>
+              <BigNumber value={streak} unit="d" size={44} />
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+              {['M','T','W','T','F','S','S'].map((d, i) => {
+                const done = i < Math.min(streak, 7)
+                const today = i === new Date().getDay() - 1
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: 4,
+                      background: done ? T.accent : 'transparent',
+                      border: done ? 'none' : `1px solid ${T.hair2}`,
+                      outline: today ? `2px solid ${T.accent}` : 'none',
+                      outlineOffset: today ? 2 : 0,
+                    }} />
+                    <span style={{ fontFamily: FONT.mono, fontSize: 8, color: T.faint, letterSpacing: '0.05em' }}>{d}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+        </div>
 
+        {/* ── TODAY'S LOG ──────────────────────────────────────────── */}
+        <div style={{ padding: '22px 16px 0' }}>
+          <div style={{ padding: '0 6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Eyebrow>Today's Log</Eyebrow>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.08em' }}>
+              {loggedCount} / {todayRows.length} LOGGED
+            </span>
+          </div>
+          <Card padding={0} radius={14}>
+            {todayRows.map((row, i) => (
+              <div key={row.label} style={{
+                display: 'flex', alignItems: 'center', padding: '14px 16px',
+                borderBottom: i === todayRows.length - 1 ? 'none' : `1px solid ${T.hair}`,
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 9,
+                  border: row.done ? 'none' : `1px solid ${T.hair2}`,
+                  background: row.done ? T.ink : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginRight: 12, flexShrink: 0,
+                }}>
+                  {row.done && (
+                    <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke={T.inkText} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 6.5L5 9.5l5-7"/>
+                    </svg>
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>{row.label}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{
+                    fontFamily: FONT.ui, fontSize: 13,
+                    fontWeight: row.done ? 500 : 400,
+                    color: row.done ? T.text : T.mute,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>{row.val}</div>
+                </div>
+              </div>
+            ))}
+
+            {/* Water dots */}
             {todayWater > 0 && (
-              <div className={styles.waterRow}>
-                <span className={styles.waterRowLabel}>Water today</span>
-                <div className={styles.waterDots}>
+              <div style={{
+                padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+                borderTop: `1px solid ${T.hair}`,
+              }}>
+                <Eyebrow style={{ fontSize: 9 }}>Water</Eyebrow>
+                <div style={{ display: 'flex', gap: 4, flex: 1 }}>
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className={`${styles.waterDot} ${i < todayWater ? styles.waterDotFull : ''}`} />
+                    <div key={i} style={{
+                      width: 8, height: 8, borderRadius: 4,
+                      background: i < todayWater ? T.accent : T.hair,
+                    }} />
                   ))}
                 </div>
-                <span className={styles.waterRowCount}>{todayWater}/8</span>
+                <span style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.06em' }}>{todayWater}/8</span>
               </div>
             )}
 
+            {/* Protein goal bar */}
             {proteinPct !== null && (
-              <div className={styles.proteinGoalWrap}>
-                <div className={styles.proteinGoalBar}>
-                  <div className={styles.proteinGoalFill} style={{ width: `${proteinPct}%` }} />
+              <div style={{ padding: '10px 16px 14px', borderTop: `1px solid ${T.hair}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Eyebrow style={{ fontSize: 9 }}>Protein goal</Eyebrow>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>
+                    {todayLog.protein}g / {proteinGoal}g · {proteinPct}%
+                  </span>
                 </div>
-                <p className={styles.proteinGoalText}>
-                  <span>{proteinPct}%</span> of protein goal · {todayLog.protein}g / {proteinGoal}g
-                </p>
+                <div style={{ height: 4, background: T.hair, borderRadius: 2, position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${proteinPct}%`, background: T.accent, borderRadius: 2 }} />
+                </div>
               </div>
             )}
 
-            {todayLog.mood && MOOD_MAP[todayLog.mood] && (
-              <div className={styles.todayMoodRow}>
-                <span className={styles.todayMoodIcon}>{MOOD_MAP[todayLog.mood].icon}</span>
-                <span className={styles.todayMoodText}>Feeling {MOOD_MAP[todayLog.mood].label.toLowerCase()} today</span>
-              </div>
-            )}
+            {/* Log button */}
+            <div style={{ padding: '0 16px 16px' }}>
+              <button
+                onClick={() => onNavigate('log')}
+                style={{
+                  width: '100%', height: 48, borderRadius: 12, border: 0,
+                  background: T.ink, color: T.inkText, cursor: 'pointer',
+                  fontFamily: FONT.ui, fontSize: 14, fontWeight: 600,
+                  letterSpacing: '-0.01em', marginTop: 4,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                {loggedCount > 0 ? 'Update today' : 'Log today'}
+              </button>
+            </div>
+          </Card>
+        </div>
 
-            <button
-              data-testid="log-today-btn"
-              className={styles.logBtn}
-              onClick={() => onNavigate('log')}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-              </svg>
-              {loggedCount > 0 ? 'Update Today' : 'Log Today'}
-            </button>
+        {/* ── WEEKLY SUMMARY ───────────────────────────────────────── */}
+        <div style={{ padding: '18px 16px 0' }}>
+          <div style={{ padding: '0 6px 10px' }}>
+            <Eyebrow>This week</Eyebrow>
           </div>
-        </section>
-
-        {/* ── Weekly summary ───────────────────────────────────────── */}
-        <section className={styles.section}>
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryHeader}>
-              <span className={styles.summaryLabel}>This week</span>
-              {weeklySummary.weightDelta !== null && (
-                <span className={`${styles.summaryDelta} ${
-                  (goalType === 'gain' ? weeklySummary.weightDelta > 0 : weeklySummary.weightDelta < 0)
-                    ? styles.summaryDeltaGood
-                    : weeklySummary.weightDelta === 0
-                    ? styles.summaryDeltaNeutral
-                    : styles.summaryDeltaBad
-                }`}>
-                  {weeklySummary.weightDelta > 0 ? '+' : ''}{weeklySummary.weightDelta} kg
-                </span>
-              )}
-            </div>
-            <p className={styles.summaryHeadline}>{weeklySummary.headline}</p>
-            <div className={styles.summaryStats}>
-              {weeklySummary.daysLogged > 0 && (
-                <div className={styles.summaryStat}>
-                  <span className={styles.summaryStatValue}>{weeklySummary.daysLogged}<span className={styles.summaryStatSub}>/7</span></span>
-                  <span className={styles.summaryStatLabel}>Days logged</span>
-                </div>
-              )}
-              {weeklySummary.activitySessions > 0 && (
-                <div className={styles.summaryStat}>
-                  <span className={styles.summaryStatValue}>{weeklySummary.activitySessions}</span>
-                  <span className={styles.summaryStatLabel}>Workouts</span>
-                </div>
-              )}
-              {weeklySummary.avgProtein && (
-                <div className={styles.summaryStat}>
-                  <span className={styles.summaryStatValue}>{weeklySummary.avgProtein}<span className={styles.summaryStatSub}>g</span></span>
-                  <span className={styles.summaryStatLabel}>Avg protein</span>
-                </div>
-              )}
-              {weeklySummary.proteinGoalDays !== null && (
-                <div className={styles.summaryStat}>
-                  <span className={styles.summaryStatValue}>{weeklySummary.proteinGoalDays}<span className={styles.summaryStatSub}>×</span></span>
-                  <span className={styles.summaryStatLabel}>Goal hit</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Side effects ─────────────────────────────────────────── */}
-        {sideEffects.length > 0 && (
-          <section className={styles.section}>
-            <div className={styles.sideEffectsCard}>
-              <h2 className={styles.sectionTitle} style={{ marginBottom: 12 }}>Side effects this week</h2>
-              <div className={styles.sideEffectsList}>
-                {sideEffects.map(se => {
-                  const better = se.thisWeek < se.lastWeek
-                  const worse  = se.thisWeek > se.lastWeek
-                  return (
-                    <div key={se.key} className={styles.sideEffectRow}>
-                      <span className={styles.sideEffectName}>{se.label}</span>
-                      <div className={styles.sideEffectBar}>
-                        <div
-                          className={styles.sideEffectFill}
-                          style={{ width: `${Math.min(100, se.thisWeek / 7 * 100)}%` }}
-                        />
-                      </div>
-                      <span className={styles.sideEffectCount}>{se.thisWeek}×</span>
-                      {se.lastWeek > 0 && (
-                        <span className={`${styles.sideEffectTrend} ${better ? styles.trendBetter : worse ? styles.trendWorse : styles.trendSame}`}>
-                          {better ? '↓' : worse ? '↑' : '→'}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              <p className={styles.sideEffectNote}>Arrows compare to last week. Log side effects in the daily log.</p>
-            </div>
-          </section>
-        )}
-
-        {/* ── Dose history ─────────────────────────────────────────── */}
-        {doseHistory.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle} style={{ marginBottom: 10 }}>Dose history</h2>
-            <div className={styles.doseHistoryCard}>
-              {doseHistory.map((entry, i) => (
-                <div key={i} className={styles.doseRow}>
-                  <div className={styles.doseDot} />
-                  <span className={styles.doseDate}>{formatDate(entry.date, { month: 'short', day: 'numeric' })}</span>
-                  <span className={styles.doseMg}>{Number(entry.dose).toFixed(2)} mg</span>
+          <Card padding={20} radius={14}>
+            <p style={{ fontFamily: FONT.ui, fontSize: 15, lineHeight: 1.5, letterSpacing: '-0.01em', color: T.text, marginBottom: 16 }}>
+              {weeklySummary.headline}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+              {[
+                { v: weeklySummary.daysLogged, sub: '/7', label: 'Days logged' },
+                { v: weeklySummary.activitySessions, sub: '', label: 'Workouts' },
+                { v: weeklySummary.avgProtein, sub: 'g', label: 'Avg protein' },
+                { v: weeklySummary.proteinGoalDays, sub: '×', label: 'Goal hit' },
+              ].filter(s => s.v !== null && s.v !== undefined && s.v > 0).map((s, i) => (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 24, letterSpacing: '-0.01em' }}>
+                    {s.v}<span style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, fontStyle: 'normal' }}>{s.sub}</span>
+                  </div>
+                  <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em', marginTop: 4 }}>
+                    {s.label.toUpperCase()}
+                  </div>
                 </div>
               ))}
             </div>
-          </section>
+          </Card>
+        </div>
+
+        {/* ── SIDE EFFECTS ─────────────────────────────────────────── */}
+        {sideEffects.length > 0 && (
+          <div style={{ padding: '18px 16px 0' }}>
+            <div style={{ padding: '0 6px 10px' }}><Eyebrow>Side effects this week</Eyebrow></div>
+            <Card padding={16} radius={14}>
+              {sideEffects.map(se => (
+                <div key={se.key} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ flex: 1, fontFamily: FONT.ui, fontSize: 13, fontWeight: 500 }}>{se.label}</div>
+                  <div style={{ width: 80, height: 4, background: T.hair, borderRadius: 2, position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, se.thisWeek / 7 * 100)}%`, background: T.ink, borderRadius: 2 }} />
+                  </div>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, width: 20, textAlign: 'right' }}>{se.thisWeek}×</span>
+                  {se.lastWeek > 0 && (
+                    <span style={{ fontFamily: FONT.mono, fontSize: 10, color: se.thisWeek < se.lastWeek ? T.accentDark : se.thisWeek > se.lastWeek ? '#C0392B' : T.mute }}>
+                      {se.thisWeek < se.lastWeek ? '↓' : se.thisWeek > se.lastWeek ? '↑' : '→'}
+                    </span>
+                  )}
+                </div>
+              ))}
+              <p style={{ fontFamily: FONT.ui, fontSize: 11, color: T.mute, marginTop: 4 }}>
+                Arrows compare to last week.
+              </p>
+            </Card>
+          </div>
         )}
 
-        {/* ── Weekly average ── secondary, below today ─────────────── */}
-        <section className={styles.section}>
-          <div className={styles.weeklyHeader}>
-            <h2 className={styles.sectionTitle}>Weekly Average</h2>
-            <span className={styles.weeklyRange}>{weekLabel}</span>
+        {/* ── DOSE HISTORY ─────────────────────────────────────────── */}
+        {doseHistory.length > 0 && (
+          <div style={{ padding: '18px 16px 0' }}>
+            <div style={{ padding: '0 6px 10px' }}><Eyebrow>Dose history</Eyebrow></div>
+            <Card padding={0} radius={14}>
+              {doseHistory.map((entry, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', padding: '13px 16px',
+                  borderBottom: i === doseHistory.length - 1 ? 'none' : `1px solid ${T.hair}`,
+                  gap: 12,
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 4, background: T.accent, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontFamily: FONT.ui, fontSize: 13, color: T.mute }}>
+                    {formatDate(entry.date, { month: 'short', day: 'numeric' })}
+                  </span>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }}>
+                    {Number(entry.dose).toFixed(2)} mg
+                  </span>
+                </div>
+              ))}
+            </Card>
           </div>
-          <div className={styles.snapshotGrid}>
-            <SnapshotCard
-              label="Avg Calories"
-              value={avgCalories?.toLocaleString()}
-              sub="kcal / day"
-            />
-            <SnapshotCard
-              label="Avg Protein"
-              value={avgProtein ? `${avgProtein}g` : null}
-              sub="per day"
-            />
-            <SnapshotCard
-              label="Activity"
-              value={totalActivityMin ? `${totalActivityMin} min` : null}
-              sub={activityDays ? `${activityDays} days` : 'none logged'}
-            />
-            <SnapshotCard
-              label="Last Injection"
-              value={lastInjection ? `${lastInjection.dose}mg` : null}
-              sub={lastInjectionLabel}
-            />
-          </div>
-        </section>
+        )}
 
-        {/* ── Insight teaser ───────────────────────────────────────── */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Latest Insight</h2>
-          <div className={styles.insightCard}>
-            <div className={styles.insightIcon}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1.5a4.5 4.5 0 0 1 1.688 8.67c-.24.098-.438.32-.438.587V11.5a1.25 1.25 0 0 1-2.5 0v-.743c0-.267-.198-.49-.438-.587A4.5 4.5 0 0 1 8 1.5Z" stroke="currentColor" strokeWidth="1.25"/>
-                <path d="M6.5 13.5h3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
-              </svg>
+        {/* ── INSIGHTS LINK ────────────────────────────────────────── */}
+        <div style={{ padding: '18px 16px 0' }}>
+          <button
+            onClick={() => onNavigate('insights')}
+            style={{
+              width: '100%', padding: '16px 20px', borderRadius: 14,
+              border: `1px solid ${T.hair}`, background: T.card, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontFamily: FONT.ui, textAlign: 'left',
+            }}
+          >
+            <div>
+              <Eyebrow style={{ marginBottom: 4 }}>Insights</Eyebrow>
+              <div style={{ fontSize: 14, fontWeight: 500, color: T.text, letterSpacing: '-0.01em' }}>
+                View trends & patterns →
+              </div>
             </div>
-            <div className={styles.insightBody}>
-              <p className={styles.insightText}>{insightText}</p>
-              <button className={styles.insightLink} onClick={() => onNavigate('insights')}>
-                View all insights
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2.5 6h7M6.5 3.5 9 6l-2.5 2.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+            <div style={{ width: 32, height: 32, borderRadius: 16, background: T.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.accentDark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
             </div>
-          </div>
-        </section>
-
-        {/* ── Bottom nav ───────────────────────────────────────────── */}
-        <nav className={styles.bottomNav}>
-          {[
-            { icon: homeIcon,        label: 'Home',     active: true },
-            { icon: chartIcon,       label: 'Charts',   active: false, action: 'charts' },
-            { icon: plusIcon,        label: 'Log',      active: false, center: true, action: 'log' },
-            { icon: measureIcon,     label: 'Measure',  active: false, action: 'measurements' },
-            { icon: settingsIcon,    label: 'Settings', active: false, action: 'settings' },
-          ].map(({ icon, label, active, center, action }) => (
-            <button key={label} onClick={() => action && onNavigate(action)}
-              className={`${styles.navItem} ${active ? styles.navItemActive : ''} ${center ? styles.navItemCenter : ''}`}>
-              {icon}
-              {!center && <span className={styles.navLabel}>{label}</span>}
-            </button>
-          ))}
-        </nav>
+          </button>
+        </div>
 
       </div>
+
+      {/* ── BOTTOM TAB BAR ───────────────────────────────────────── */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40 }}>
+        <TabBar active="home" onTab={onNavigate} />
+      </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
 }
-
-// ── Nav icons ─────────────────────────────────────────────────────────────────
-
-const homeIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-    <path d="M7.5 18v-5h5v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const chartIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 14l4.5-5 3.5 3 4-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 17h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const plusIcon = (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-    <path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-)
-const insightNavIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 7v3M10 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const measureIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <rect x="2" y="7" width="16" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M5 7V5.5M8 7V5M11 7V5.5M14 7V5M5 13v1.5M8 13v2M11 13v1.5M14 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-  </svg>
-)
-const settingsIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 3v1.5M10 15.5V17M3 10h1.5M15.5 10H17M4.93 4.93l1.06 1.06M14 14l1.06 1.06M4.93 15.07l1.06-1.06M14 6l1.06-1.06" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)

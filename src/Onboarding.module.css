@@ -30,7 +30,7 @@
 }
 
 .progressSegmentFilled {
-  background: var(--text-primary);
+  background: var(--accent);
 }
 
 /* Content area */

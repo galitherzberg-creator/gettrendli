@@ -1,4 +1,5 @@
 import styles from './Insights.module.css'
+import { T, FONT, Eyebrow, Hairline, Card, TabBar } from './tokens'
 
 // ── Card icons ────────────────────────────────────────────────────────────────
 
@@ -181,158 +182,142 @@ export default function Insights({ logs = {}, onNavigate }) {
   const best       = weeklyRows.find(w => w.best)
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.page}>
+    <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: FONT.ui }}>
+      <div style={{ maxWidth: 430, margin: '0 auto', paddingBottom: 100 }}>
 
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <header className={styles.header}>
-          <h1 className={styles.headerTitle}>Insights</h1>
-          <p className={styles.headerSub}>
-            {hasData ? `Based on your last ${weeklyRows.length} week${weeklyRows.length !== 1 ? 's' : ''}` : 'Keep logging to unlock insights'}
-          </p>
-        </header>
-
-        <div className={styles.scrollContent}>
-
-          {/* ── Pattern summary ──────────────────────────────────── */}
-          <section className={styles.summaryCard}>
-            <p className={styles.summaryEyebrow}>Your pattern</p>
-            {hasData && best ? (
-              <p className={styles.summaryText}>
-                On your best week ({best.week}){best.protein ? <>, protein averaged <span className={styles.highlight}>{best.protein}g</span></> : null}{best.calories ? <> and calories stayed around <span className={styles.highlight}>{best.calories.toLocaleString()} kcal</span></> : null}{best.activityDays > 0 ? <> with <span className={styles.highlight}>{best.activityDays} active day{best.activityDays !== 1 ? 's' : ''}</span></> : null}{best.weightChange !== null ? <> and a weight change of <span className={styles.highlight}>{best.weightChange > 0 ? '+' : ''}{best.weightChange} kg</span></> : null}.
-              </p>
-            ) : (
-              <p className={styles.summaryText}>
-                Log consistently for a few weeks and your personal pattern will appear here — showing what your best weeks look like in numbers.
-              </p>
-            )}
-          </section>
-
-          {/* ── Insight cards ─────────────────────────────────────── */}
-          <section>
-            <h2 className={styles.sectionTitle}>What to know</h2>
-            <div className={styles.cardList}>
-              {insightCards.map(card => (
-                <InsightCard key={card.title} {...card} />
-              ))}
+        {/* ── HERO — inverted pattern card ─────────────────────────── */}
+        <div style={{ padding: '18px 16px 0' }}>
+          <Card inverted padding={24} radius={20}>
+            <Eyebrow color="#7a7a7a">Your pattern</Eyebrow>
+            <div style={{ marginTop: 12, fontFamily: FONT.ui, fontSize: 16, lineHeight: 1.55, color: T.inkText }}>
+              {hasData && best ? (
+                <>
+                  On your best week ({best.week})
+                  {best.protein ? <>, protein averaged <span style={{ color: T.accent, fontWeight: 600 }}>{best.protein}g</span></> : null}
+                  {best.calories ? <> and calories stayed around <span style={{ color: T.accent, fontWeight: 600 }}>{best.calories.toLocaleString()} kcal</span></> : null}
+                  {best.activityDays > 0 ? <> with <span style={{ color: T.accent, fontWeight: 600 }}>{best.activityDays} active day{best.activityDays !== 1 ? 's' : ''}</span></> : null}
+                  {best.weightChange !== null ? <> and a weight change of <span style={{ color: T.accent, fontWeight: 600 }}>{best.weightChange > 0 ? '+' : ''}{best.weightChange} kg</span></> : null}.
+                </>
+              ) : (
+                'Log consistently for a few weeks and your personal pattern will appear here — showing what your best weeks look like in numbers.'
+              )}
             </div>
-          </section>
-
-          {/* ── Weekly comparison ─────────────────────────────────── */}
-          <section>
-            <h2 className={styles.sectionTitle}>Week-by-week</h2>
-            {hasData ? (
-              <div className={styles.weekCards}>
-                {weeklyRows.map(row => (
-                  <div key={row.week} className={`${styles.weekCard} ${row.best ? styles.weekCardBest : ''}`}>
-                    <div className={styles.weekCardHeader}>
-                      <span className={styles.weekCardLabel}>{row.week}</span>
-                      {row.best && <span className={styles.bestPill}>best week</span>}
-                    </div>
-                    <div className={styles.weekCardGrid}>
-                      {row.calories && (
-                        <div className={styles.weekStat}>
-                          <span className={styles.weekStatLabel}>Calories</span>
-                          <span className={styles.weekStatValue}>{row.calories.toLocaleString()}</span>
-                          <span className={styles.weekStatUnit}>kcal avg</span>
-                        </div>
-                      )}
-                      {row.protein && (
-                        <div className={styles.weekStat}>
-                          <span className={styles.weekStatLabel}>Protein</span>
-                          <span className={styles.weekStatValue}>{row.protein}g</span>
-                          <span className={styles.weekStatUnit}>per day</span>
-                        </div>
-                      )}
-                      {row.activityDays > 0 && (
-                        <div className={styles.weekStat}>
-                          <span className={styles.weekStatLabel}>Activity</span>
-                          <span className={styles.weekStatValue}>{row.activityMin} min</span>
-                          <span className={styles.weekStatUnit}>{row.activityDays} days</span>
-                        </div>
-                      )}
-                      {row.dose && (
-                        <div className={styles.weekStat}>
-                          <span className={styles.weekStatLabel}>Dose</span>
-                          <span className={styles.weekStatValue}>{row.dose}</span>
-                          <span className={styles.weekStatUnit}>this week</span>
-                        </div>
-                      )}
-                      {row.weightChange !== null && (
-                        <div className={`${styles.weekStat} ${styles.weekStatFull}`}>
-                          <span className={styles.weekStatLabel}>Weight change</span>
-                          <span className={styles.weekStatValue}><WeightDelta value={row.weightChange} /> kg</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState />
-            )}
-          </section>
-
-          {/* ── Disclaimer ────────────────────────────────────────── */}
-          <p className={styles.disclaimer}>
-            Insights are based on your logged data only and are for personal tracking purposes.
-            They are not medical advice. Consult your healthcare provider before making changes to
-            your diet, activity, or medication routine.
-          </p>
-
-          <div className={styles.bottomSpacer} />
+          </Card>
         </div>
 
-        {/* ── Bottom nav ───────────────────────────────────────────── */}
-        <nav className={styles.bottomNav}>
-          {[
-            { icon: homeIcon,       label: 'Home',     action: 'dashboard' },
-            { icon: chartIcon,      label: 'Charts',   action: 'charts' },
-            { icon: plusIcon,       label: 'Log',      action: 'log', center: true },
-            { icon: insightNavIcon, label: 'Insights', action: 'insights', active: true },
-            { icon: settingsIcon,   label: 'Settings', action: 'settings' },
-          ].map(({ icon, label, active, center, action }) => (
-            <button key={label} onClick={() => action && onNavigate(action)}
-              className={`${styles.navItem} ${active ? styles.navItemActive : ''} ${center ? styles.navItemCenter : ''}`}>
-              {icon}
-              {!center && <span className={styles.navLabel}>{label}</span>}
-            </button>
-          ))}
-        </nav>
+        {/* ── Header ───────────────────────────────────────────────── */}
+        <div style={{ padding: '22px 22px 0' }}>
+          <div style={{ fontFamily: FONT.ui, fontSize: 32, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1 }}>Insights</div>
+          <div style={{ fontFamily: FONT.ui, fontSize: 14, color: T.mute, marginTop: 6 }}>
+            {hasData ? `Based on your last ${weeklyRows.length} week${weeklyRows.length !== 1 ? 's' : ''}` : 'Keep logging to unlock insights'}
+          </div>
+        </div>
 
+        <Hairline style={{ margin: '18px 22px 0' }} />
+
+        {/* ── Insight tip cards ─────────────────────────────────────── */}
+        <div style={{ padding: '14px 16px 0' }}>
+          <div style={{ padding: '0 6px 12px' }}><Eyebrow>What to know</Eyebrow></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {insightCards.map(card => (
+              <Card key={card.title} padding={16} radius={14} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 10,
+                  background: T.accentSoft, color: T.accentDark,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  {card.icon}
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em', marginBottom: 4 }}>{card.title}</div>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute, lineHeight: 1.5 }}>{card.body}</div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Week-by-week ─────────────────────────────────────────── */}
+        <div style={{ padding: '22px 16px 0' }}>
+          <div style={{ padding: '0 6px 12px' }}><Eyebrow>Week by week</Eyebrow></div>
+          {hasData ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {weeklyRows.map(row => (
+                <Card key={row.week} padding={16} radius={14} style={{ border: row.best ? `1px solid ${T.accent}` : `1px solid ${T.hair}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <Eyebrow>{row.week}</Eyebrow>
+                    {row.best && (
+                      <span style={{
+                        fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.1em',
+                        background: T.accentSoft, color: T.accentDark,
+                        padding: '3px 8px', borderRadius: 100,
+                      }}>BEST WEEK</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {row.calories && (
+                      <div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>CALORIES</div>
+                        <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, marginTop: 2 }}>{row.calories.toLocaleString()}</div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em' }}>kcal avg</div>
+                      </div>
+                    )}
+                    {row.protein && (
+                      <div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>PROTEIN</div>
+                        <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, marginTop: 2 }}>{row.protein}g</div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em' }}>per day</div>
+                      </div>
+                    )}
+                    {row.activityDays > 0 && (
+                      <div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>ACTIVITY</div>
+                        <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, marginTop: 2 }}>{row.activityMin}</div>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em' }}>{row.activityDays} days · min</div>
+                      </div>
+                    )}
+                  </div>
+                  {row.weightChange !== null && (
+                    <>
+                      <Hairline style={{ margin: '12px 0 10px' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Eyebrow style={{ fontSize: 9 }}>Weight change</Eyebrow>
+                        <span style={{
+                          fontFamily: FONT.mono, fontSize: 11, fontWeight: 600,
+                          color: row.weightChange < 0 ? T.accentDark : row.weightChange > 0 ? T.text : T.mute,
+                          letterSpacing: '0.04em',
+                        }}>
+                          {row.weightChange > 0 ? '+' : ''}{row.weightChange.toFixed(1)} kg
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card padding={24} radius={14}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: FONT.ui, fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 8 }}>No data yet</div>
+                <div style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute, lineHeight: 1.55 }}>
+                  Log at least 2 weeks of data to see your week-by-week breakdown here.
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* ── Disclaimer ────────────────────────────────────────────── */}
+        <p style={{ fontFamily: FONT.ui, fontSize: 11, color: T.faint, lineHeight: 1.6, textAlign: 'center', padding: '18px 22px 0', margin: 0 }}>
+          Insights are based on your logged data only and are not medical advice.
+        </p>
+
+      </div>
+
+      {/* ── Bottom tab bar ───────────────────────────────────────── */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40 }}>
+        <TabBar active="insights" onTab={onNavigate} />
       </div>
     </div>
   )
 }
-
-// ── Nav icons ─────────────────────────────────────────────────────────────────
-
-const homeIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-    <path d="M7.5 18v-5h5v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const chartIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 14l4.5-5 3.5 3 4-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 17h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const plusIcon = (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-    <path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-)
-const insightNavIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 7v3M10 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const settingsIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 3v1.5M10 15.5V17M3 10h1.5M15.5 10H17M4.93 4.93l1.06 1.06M14 14l1.06 1.06M4.93 15.07l1.06-1.06M14 6l1.06-1.06" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)

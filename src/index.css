@@ -5,19 +5,38 @@
 }
 
 :root {
-  --bg: #FAFAF9;
+  /* ── Trendli design tokens ── */
+  --bg:          #FAFAF7;
+  --card:        #FFFFFF;
+  --ink:         #0A0A0A;
+  --text:        #1A1A1A;
+  --mute:        #8A8A8A;
+  --faint:       #BFBFBF;
+  --hair:        #ECECEC;
+  --hair2:       #E5E5E1;
+  --ink-text:    #FAFAF7;
+  --accent:      #3FCAA5;
+  --accent-dark: #2BA384;
+  --accent-soft: rgba(63,202,165,0.18);
+  --accent-hair: rgba(63,202,165,0.38);
+
+  /* font stacks */
+  --font-ui:    "Inter Tight", -apple-system, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", "Times New Roman", serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, monospace;
+
+  /* legacy aliases kept for backward compat */
   --surface: #FFFFFF;
-  --surface-2: #F3F3F1;
-  --border: #E2E2DE;
-  --text-primary: #0F0F0F;
-  --text-secondary: #545454;
-  --text-muted: #9C9C9C;
-  --accent: #111111;
-  --accent-light: #EEEEED;
-  --accent-hover: #2A2A2A;
-  --green: #15803D;
-  --green-light: #EDFAF3;
-  --red: #DC2626;
+  --surface-2: #F3F2EE;
+  --border: #ECECEC;
+  --text-primary: #1A1A1A;
+  --text-secondary: #8A8A8A;
+  --text-muted: #BFBFBF;
+  --accent-light: rgba(63,202,165,0.16);
+  --accent-hover: #2BA384;
+  --green: #2BA384;
+  --green-light: rgba(63,202,165,0.12);
+  --red: #C0392B;
   --red-light: #FEF1F1;
   --yellow: #B45309;
   --yellow-light: #FEF7ED;
@@ -25,42 +44,18 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 18px;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
-  --card-inverse: #0F0F0F;
-  --chart-grid: #E8E8E4;
-  --chart-cursor: #F3F3F1;
-}
-
-[data-theme="dark"] {
-  --bg: #0A0A0A;
-  --surface: #141414;
-  --surface-2: #1C1C1C;
-  --border: #272727;
-  --text-primary: #F0F0F0;
-  --text-secondary: #888888;
-  --text-muted: #474747;
-  --accent: #F0F0F0;
-  --accent-light: #1C1C1C;
-  --accent-hover: #D8D8D8;
-  --green: #22C55E;
-  --green-light: #0C2018;
-  --red: #EF4444;
-  --red-light: #1C0808;
-  --yellow: #FBBF24;
-  --yellow-light: #1C1400;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.45);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.55);
-  --card-inverse: #161616;
-  --chart-grid: #252525;
-  --chart-cursor: #1C1C1C;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --card-inverse: #0A0A0A;
+  --chart-grid: #ECECEC;
+  --chart-cursor: #F3F2EE;
 }
 
 html, body {
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-ui);
   background-color: var(--bg);
-  color: var(--text-primary);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: clip;

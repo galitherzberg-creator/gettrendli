@@ -445,8 +445,8 @@
   display: block;
 }
 
-.silAccent { fill: var(--text-primary); opacity: 0.9; }
-.silMuted  { fill: var(--text-muted);   opacity: 0.25; }
+.silAccent { fill: var(--accent); opacity: 0.9; }
+.silMuted  { fill: var(--text-muted); opacity: 0.25; }
 
 .silLabel {
   font-size: 11px;

@@ -561,7 +561,7 @@
   transition: background 0.15s;
 }
 
-.waterDotFull { background: var(--text-primary); }
+.waterDotFull { background: var(--accent); }
 
 /* Side effects */
 .sideEffectsHeader {

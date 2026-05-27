@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import styles from './Settings.module.css'
-import TipBanner, { useTip } from './TipBanner'
+import { TabBar, T, FONT, Eyebrow } from './tokens'
 
 // ── TDEE logic ────────────────────────────────────────────────────────────────
 
@@ -24,7 +24,6 @@ function computeTDEE(sex, age, heightCm, weightKg, activity) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Settings({ userSettings, onSaveSettings, theme, onThemeChange, onNavigate }) {
-  const tip = useTip('settings')
   // Profile
   const [name, setName]                       = useState(userSettings.name)
   const [goalWeight, setGoalWeight]           = useState(String(userSettings.goalWeight))
@@ -70,15 +69,11 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
 
         {/* ── Header ─────────────────────────────────────────────── */}
         <header className={styles.header}>
-          <h1 className={styles.headerTitle}>Settings</h1>
+          <div>
+            <Eyebrow>Settings</Eyebrow>
+            <h1 style={{ fontFamily: FONT.ui, fontSize: 28, fontWeight: 500, letterSpacing: '-0.035em', marginTop: 4, color: T.text }}>You.</h1>
+          </div>
         </header>
-
-        {tip.visible && (
-          <TipBanner
-            text="Set your goal type and daily protein target in Profile to unlock direction-aware tracking on the dashboard."
-            onDismiss={tip.dismiss}
-          />
-        )}
 
         <div className={styles.scrollContent}>
 
@@ -352,55 +347,12 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
         </div>
 
         {/* ── Bottom nav ───────────────────────────────────────────── */}
-        <nav className={styles.bottomNav}>
-          {[
-            { icon: homeIcon,     label: 'Home',     action: 'dashboard' },
-            { icon: chartIcon,    label: 'Charts',   action: 'charts'   },
-            { icon: plusIcon,     label: 'Log',      action: 'log',      center: true },
-            { icon: measureIcon,  label: 'Measure',  action: 'measurements' },
-            { icon: settingsIcon, label: 'Settings', action: 'settings', active: true },
-          ].map(({ icon, label, active, center, action }) => (
-            <button key={label} onClick={() => action && onNavigate(action)}
-              className={`${styles.navItem} ${active ? styles.navItemActive : ''} ${center ? styles.navItemCenter : ''}`}>
-              {icon}
-              {!center && <span className={styles.navLabel}>{label}</span>}
-            </button>
-          ))}
-        </nav>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40 }}>
+          <TabBar active="profile" onTab={onNavigate} />
+        </div>
 
       </div>
     </div>
   )
 }
 
-// ── Nav icons ─────────────────────────────────────────────────────────────────
-
-const homeIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-    <path d="M7.5 18v-5h5v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const chartIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 14l4.5-5 3.5 3 4-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 17h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const plusIcon = (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-    <path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-)
-const measureIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <rect x="2" y="7" width="16" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M5 7V5.5M8 7V5M11 7V5.5M14 7V5M5 13v1.5M8 13v2M11 13v1.5M14 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-  </svg>
-)
-const settingsIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 3v1.5M10 15.5V17M3 10h1.5M15.5 10H17M4.93 4.93l1.06 1.06M14 14l1.06 1.06M4.93 15.07l1.06-1.06M14 6l1.06-1.06" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)

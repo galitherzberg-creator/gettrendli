@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { todayISO, isoDate, formatDate } from './logStore'
 import styles from './LogToday.module.css'
-import TipBanner, { useTip } from './TipBanner'
+import { TabBar } from './tokens'
 
 const ACTIVITY_TYPES = ['Walk', 'Run', 'Gym', 'Swim', 'Other']
 
@@ -253,7 +253,6 @@ function formFromEntry(entry, date) {
 
 export default function LogToday({ logs, updateLog, onNavigate }) {
   const [selectedDate, setSelectedDate] = useState(todayISO)
-  const tip = useTip('log')
 
   // Form fields
   const [calories, setCalories]               = useState('')
@@ -374,13 +373,6 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
           </div>
           <div className={styles.headerSpacer} />
         </header>
-
-        {tip.visible && (
-          <TipBanner
-            text="Calories and protein are required. All other sections are optional — tap to open them."
-            onDismiss={tip.dismiss}
-          />
-        )}
 
         {/* Date selector */}
         <DateSelector value={selectedDate} onChange={setSelectedDate} />
@@ -583,6 +575,11 @@ export default function LogToday({ logs, updateLog, onNavigate }) {
         </div>
 
         <Toast visible={showToast} isUpdate={lastSaveWasUpdate} />
+      </div>
+
+      {/* Fixed tab bar */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40 }}>
+        <TabBar active="log" onTab={onNavigate} />
       </div>
     </div>
   )

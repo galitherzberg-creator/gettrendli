@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { todayISO, formatDate } from './logStore'
 import styles from './Measurements.module.css'
+import { T, FONT, Eyebrow, TabBar } from './tokens'
 
 const FIELDS = [
   { key: 'waist',  label: 'Waist',  placeholder: '80' },
@@ -273,13 +274,20 @@ export default function Measurements({ measurements, onUpdateMeasurements, onNav
       <div className={styles.page}>
 
         {/* Header */}
-        <header className={styles.header}>
-          <h1 className={styles.headerTitle}>Measurements</h1>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 0' }}>
+          <div style={{ fontFamily: FONT.ui, fontSize: 32, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1, color: T.text }}>Measurements</div>
           {!showForm && (
-            <button className={styles.addBtn} onClick={openAdd} type="button">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
+            <button
+              onClick={openAdd}
+              type="button"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '9px 14px', borderRadius: 18,
+                background: T.ink, color: T.inkText, border: 0, cursor: 'pointer',
+                fontFamily: FONT.ui, fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
               Add
             </button>
           )}
@@ -449,55 +457,12 @@ export default function Measurements({ measurements, onUpdateMeasurements, onNav
         </div>
 
         {/* Bottom nav */}
-        <nav className={styles.bottomNav}>
-          {[
-            { icon: homeIcon,     label: 'Home',     action: 'dashboard' },
-            { icon: chartIcon,    label: 'Charts',   action: 'charts'   },
-            { icon: plusIcon,     label: 'Log',      action: 'log',      center: true },
-            { icon: measureIcon,  label: 'Measure',  action: 'measurements', active: true },
-            { icon: settingsIcon, label: 'Settings', action: 'settings' },
-          ].map(({ icon, label, active, center, action }) => (
-            <button key={label} onClick={() => onNavigate(action)}
-              className={`${styles.navItem} ${active ? styles.navItemActive : ''} ${center ? styles.navItemCenter : ''}`}>
-              {icon}
-              {!center && <span className={styles.navLabel}>{label}</span>}
-            </button>
-          ))}
-        </nav>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40 }}>
+          <TabBar active="log" onTab={onNavigate} />
+        </div>
 
       </div>
     </div>
   )
 }
 
-// ── Nav icons ─────────────────────────────────────────────────────────────────
-
-const homeIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-    <path d="M7.5 18v-5h5v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
-const chartIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path d="M3 14l4.5-5 3.5 3 4-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 17h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-const plusIcon = (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-    <path d="M11 4v14M4 11h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-)
-const measureIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <rect x="2" y="7" width="16" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M5 7V5.5M8 7V5M11 7V5.5M14 7V5M5 13v1.5M8 13v2M11 13v1.5M14 13v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-  </svg>
-)
-const settingsIcon = (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M10 3v1.5M10 15.5V17M3 10h1.5M15.5 10H17M4.93 4.93l1.06 1.06M14 14l1.06 1.06M4.93 15.07l1.06-1.06M14 6l1.06-1.06" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)

@@ -30,6 +30,7 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
   const [height, setHeight]                   = useState(String(userSettings.height ?? ''))
   const [injectionInterval, setInjInterval]   = useState(userSettings.injectionInterval ?? 7)
   const [goalType, setGoalType]               = useState(userSettings.goalType ?? 'lose')
+  const [unitSystem, setUnitSystem]           = useState(userSettings.unitSystem ?? 'metric')
   const [proteinGoal, setProteinGoal]         = useState(String(userSettings.proteinGoal ?? ''))
   const [profileSaved, setProfileSaved]       = useState(false)
 
@@ -57,6 +58,7 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
       height: parseFloat(height) || userSettings.height,
       injectionInterval,
       goalType,
+      unitSystem,
       proteinGoal: parseFloat(proteinGoal) || null,
     })
     setProfileSaved(true)
@@ -182,6 +184,25 @@ export default function Settings({ userSettings, onSaveSettings, theme, onThemeC
                     </button>
                   )
                 })}
+              </div>
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>Units</label>
+              <div className={styles.toggle}>
+                {[
+                  { value: 'metric', label: 'Metric (kg / cm)' },
+                  { value: 'us',     label: 'US (lb / in)'     },
+                ].map(o => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    className={`${styles.toggleBtn} ${unitSystem === o.value ? styles.toggleBtnActive : ''}`}
+                    onClick={() => setUnitSystem(o.value)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
               </div>
             </div>
 

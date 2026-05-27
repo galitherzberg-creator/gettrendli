@@ -139,7 +139,16 @@ function computeProjection(logs, goalWeight, goalType = 'lose') {
 const PULL_THRESHOLD = 62
 
 export default function Dashboard({ logs, userSettings, onNavigate }) {
-  const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null } = userSettings
+  const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null, unitSystem = 'metric' } = userSettings
+
+  // ── Unit helpers (weights stored in kg, display in lbs when US) ───────────
+  const isMetric = unitSystem !== 'us'
+  const wUnit    = isMetric ? 'kg' : 'lb'
+  function wFmt(kg, dec = 1) {
+    if (kg == null) return null
+    const v = isMetric ? parseFloat(kg) : parseFloat(kg) * 2.2046
+    return v.toFixed(dec)
+  }
 
   const [pullY, setPullY]           = useState(0)
   const [refreshing, setRefreshing] = useState(false)
@@ -212,7 +221,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
     ? todayLog.sideEffects.map(s => s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ')).join(', ')
     : 'Log now'
   const todayRows = [
-    { label: 'Weight',       val: todayLog.weight ? `${todayLog.weight} kg` : 'Log now', done: !!todayLog.weight },
+    { label: 'Weight',       val: todayLog.weight ? `${wFmt(todayLog.weight)} ${wUnit}` : 'Log now', done: !!todayLog.weight },
     { label: 'Protein',      val: hasProtein       ? `${todayLog.protein} g`             : 'Log now', done: hasProtein },
     { label: 'Water',        val: hasWater         ? `${todayWater} cup${todayWater !== 1 ? 's' : ''}` : 'Log now', done: hasWater },
     { label: 'Side effects', val: sideEffectsLabel, done: hasSideEffects },
@@ -263,7 +272,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+              <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>
             </svg>
           </button>
         </div>
@@ -278,17 +287,25 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
                   Today
                 </span>
               </div>
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <BigNumber value={latestWeight ?? '—'} unit="kg" size={80} color={T.inkText} />
-                {prevWeight && latestWeight && (
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: FONT.mono, fontSize: 11, color: '#a0a0a0', letterSpacing: '0.08em' }}>
-                      {(latestWeight - prevWeight) > 0 ? '+' : ''}{(latestWeight - prevWeight).toFixed(1)} kg
-                    </div>
-                    <div style={{ fontFamily: FONT.ui, fontSize: 11, color: '#7a7a7a', marginTop: 4 }}>from last entry</div>
+              {(() => {
+                const displayW = latestWeight ? wFmt(latestWeight) : '—'
+                const sinceW1  = latestWeight && startWeight
+                  ? parseFloat(wFmt(latestWeight)) - parseFloat(wFmt(startWeight))
+                  : null
+                return (
+                  <div style={{ marginTop: 14, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                    <BigNumber value={displayW} unit={wUnit} size={80} color={T.inkText} />
+                    {sinceW1 !== null && (
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: FONT.mono, fontSize: 11, color: '#a0a0a0', letterSpacing: '0.08em' }}>
+                          {sinceW1 > 0 ? '+' : ''}{sinceW1.toFixed(1)} {wUnit}
+                        </div>
+                        <div style={{ fontFamily: FONT.ui, fontSize: 11, color: '#7a7a7a', marginTop: 4 }}>since week 1</div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                )
+              })()}
             </div>
 
             {/* Sparkline */}
@@ -361,13 +378,13 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
               <div style={{ position: 'absolute', right: 0, top: -4, width: 1, height: 16, background: T.ink }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.06em' }}>
-              <span>{startWeight} START</span>
-              <span style={{ color: T.text, fontWeight: 600 }}>{latestWeight} NOW</span>
-              <span>{goalWeight} GOAL</span>
+              <span>{wFmt(startWeight, 0)} START</span>
+              <span style={{ color: T.text, fontWeight: 600 }}>{wFmt(latestWeight) ?? '—'} NOW</span>
+              <span>{wFmt(goalWeight, 0)} GOAL</span>
             </div>
             {kgToGo > 0 && (
               <div style={{ fontFamily: FONT.ui, fontSize: 12, color: T.mute, marginTop: 6 }}>
-                {kgToGo} kg to go{projectedDate ? ` · on track for ${projectedDate}` : ''}
+                {wFmt(kgToGo)} {wUnit} to go{projectedDate ? ` · on track for ${projectedDate}` : ''}
               </div>
             )}
           </div>

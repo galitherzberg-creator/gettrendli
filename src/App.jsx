@@ -26,6 +26,7 @@ const defaultSettings = {
   lastInjectionDate: null,
   goalType: 'lose',      // 'lose' | 'gain'
   proteinGoal: null,     // optional grams/day
+  unitSystem: 'metric',  // 'metric' | 'us'
 }
 
 export default function App() {

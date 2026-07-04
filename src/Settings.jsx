@@ -1,372 +1,726 @@
 import { useState } from 'react'
 import styles from './Settings.module.css'
-import { TabBar, T, FONT, Eyebrow } from './tokens'
+import { T, FONT, Eyebrow, Toggle, TabBar } from './tokens'
+import { TrialBanner } from './entitlements'
 
-// ── TDEE logic ────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const activityOptions = [
-  { value: 'sedentary',   label: 'Sedentary',        sub: 'Little or no exercise',       multiplier: 1.2   },
-  { value: 'light',       label: 'Lightly active',   sub: '1–3 days / week',             multiplier: 1.375 },
-  { value: 'moderate',    label: 'Moderately active', sub: '3–5 days / week',            multiplier: 1.55  },
-  { value: 'active',      label: 'Very active',      sub: '6–7 days / week',             multiplier: 1.725 },
-  { value: 'extra',       label: 'Extra active',     sub: 'Physical job or twice daily', multiplier: 1.9   },
+const MEDICATIONS = [
+  { id: 'semaglutide', name: 'Semaglutide', brands: 'OZEMPIC · WEGOVY' },
+  { id: 'tirzepatide', name: 'Tirzepatide', brands: 'MOUNJARO · ZEPBOUND' },
+  { id: 'liraglutide', name: 'Liraglutide', brands: 'SAXENDA · VICTOZA' },
+  { id: 'none',        name: 'None / Other', brands: '' },
 ]
 
-function computeTDEE(sex, age, heightCm, weightKg, activity) {
-  if (!age || !heightCm || !weightKg || age <= 0 || heightCm <= 0 || weightKg <= 0) return null
-  const bmr = sex === 'male'
-    ? 10 * weightKg + 6.25 * heightCm - 5 * age + 5
-    : 10 * weightKg + 6.25 * heightCm - 5 * age - 161
-  const mult = activityOptions.find(o => o.value === activity)?.multiplier ?? 1.55
-  return Math.round(bmr * mult)
+const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+
+const APP_VERSION = '2.4.1'
+const APP_BUILD   = '318'
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Returns the ISO date of the most-recent occurrence of dayName (Mon–Sun) */
+function lastOccurrenceOf(dayName) {
+  const idx  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].indexOf(dayName)
+  if (idx < 0) return null
+  const today = new Date()
+  const diff  = (today.getDay() - idx + 7) % 7
+  const d     = new Date(today)
+  d.setDate(d.getDate() - diff)
+  return d.toISOString().split('T')[0]
+}
+
+function nameInitials(name) {
+  return name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
+}
+
+function padDay(n) { return String(n).padStart(3, '0') }
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+// iOS-style list card wrapper
+function ListCard({ children }) {
+  return (
+    <div style={{
+      background: T.card, border: `1px solid ${T.hair}`,
+      borderRadius: 16, overflow: 'hidden',
+      margin: '0 16px',
+    }}>
+      {children}
+    </div>
+  )
+}
+
+// Row with value + chevron (tappable)
+function ChevronRow({ label, value, onTap, first = false, isRed = false, bold = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '13px 16px', background: 'transparent',
+        border: 0, borderTop: first ? 0 : `1px solid ${T.hair}`,
+        cursor: onTap ? 'pointer' : 'default', textAlign: 'left',
+      }}
+    >
+      <span style={{ fontFamily: FONT.ui, fontSize: 14, letterSpacing: '-0.01em', color: isRed ? '#C62828' : T.text, fontWeight: bold ? 500 : 400 }}>
+        {label}
+      </span>
+      {value && !isRed && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute, letterSpacing: '-0.005em' }}>{value}</span>
+          {onTap && (
+            <svg width="6" height="11" viewBox="0 0 7 12" fill="none">
+              <path d="M1 1l5 5-5 5" stroke={T.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </div>
+      )}
+    </button>
+  )
+}
+
+// Row with toggle
+function ToggleRow({ label, value, onChange, first = false }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '11px 16px', borderTop: first ? 0 : `1px solid ${T.hair}`,
+    }}>
+      <span style={{ fontFamily: FONT.ui, fontSize: 14, color: T.text, letterSpacing: '-0.01em' }}>{label}</span>
+      <Toggle on={value} onChange={onChange} />
+    </div>
+  )
+}
+
+// Expandable row that shows an editor below
+function EditableRow({ label, value, isOpen, onTap, first = false, children }) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onTap}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '13px 16px', background: 'transparent',
+          border: 0, borderTop: first ? 0 : `1px solid ${T.hair}`,
+          cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <span style={{ fontFamily: FONT.ui, fontSize: 14, letterSpacing: '-0.01em', color: T.text }}>
+          {label}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute }}>{value}</span>
+          <svg width="6" height="11" viewBox="0 0 7 12" fill="none"
+            style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>
+            <path d="M1 1l5 5-5 5" stroke={T.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      </button>
+      {isOpen && (
+        <div style={{ padding: '4px 16px 14px', borderTop: `1px solid ${T.hair}` }}>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Small number input for inline editing
+function InlineInput({ value, onChange, onDone, unit, placeholder, step = '0.1', type = 'number' }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8 }}>
+      <input
+        autoFocus
+        type={type}
+        inputMode={type === 'number' ? 'decimal' : 'text'}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onDone}
+        onKeyDown={e => e.key === 'Enter' && onDone()}
+        placeholder={placeholder}
+        step={step}
+        style={{
+          flex: 1, padding: '10px 14px', borderRadius: 10,
+          border: `1.5px solid ${T.accent}`, outline: 0, background: T.surf2,
+          fontFamily: FONT.ui, fontSize: 15, color: T.text, letterSpacing: '-0.01em',
+        }}
+      />
+      {unit && <span style={{ fontFamily: FONT.mono, fontSize: 11, color: T.mute, letterSpacing: '0.04em' }}>{unit}</span>}
+    </div>
+  )
+}
+
+// Chip selector (horizontal scrollable chips)
+function ChipSelect({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10 }}>
+      {options.map(opt => {
+        const on = value === (opt.id ?? opt)
+        const label = opt.label ?? opt
+        return (
+          <button
+            key={opt.id ?? opt}
+            type="button"
+            onClick={() => onChange(opt.id ?? opt)}
+            style={{
+              padding: '7px 14px', borderRadius: 20,
+              border: `1px solid ${on ? T.ink : T.hair}`,
+              background: on ? T.ink : 'transparent',
+              color: on ? T.inkText : T.mute,
+              fontFamily: FONT.ui, fontSize: 13, fontWeight: on ? 600 : 500,
+              letterSpacing: '-0.01em', cursor: 'pointer',
+            }}
+          >{label}</button>
+        )
+      })}
+    </div>
+  )
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function Settings({ userSettings, onSaveSettings, theme, onThemeChange, onNavigate }) {
-  // Profile
-  const [name, setName]                       = useState(userSettings.name)
-  const [goalWeight, setGoalWeight]           = useState(String(userSettings.goalWeight))
-  const [height, setHeight]                   = useState(String(userSettings.height ?? ''))
-  const [injectionInterval, setInjInterval]   = useState(userSettings.injectionInterval ?? 7)
-  const [goalType, setGoalType]               = useState(userSettings.goalType ?? 'lose')
-  const [unitSystem, setUnitSystem]           = useState(userSettings.unitSystem ?? 'metric')
-  const [proteinGoal, setProteinGoal]         = useState(String(userSettings.proteinGoal ?? ''))
-  const [profileSaved, setProfileSaved]       = useState(false)
+// Only this account sees the Admin entry in Settings.
+const ADMIN_EMAIL = 'galit.herzberg@gmail.com'
 
-  // TDEE
-  const [sex,        setSex]        = useState('female')
-  const [age,        setAge]        = useState('35')
-  const [tdeeHeight, setTdeeHeight] = useState(String(userSettings.height ?? '165'))
-  const [tdeeWeight, setTdeeWeight] = useState(String(userSettings.startWeight ?? ''))
-  const [activity,   setActivity]   = useState('moderate')
+export default function Settings({ userSettings, onSaveSettings, logs = {}, onNavigate, entitlements, onUpgrade, onSignOut }) {
+  const s = userSettings
 
-  const tdee      = computeTDEE(sex, +age, +tdeeHeight, +tdeeWeight, activity)
-  const suggested = tdee
-    ? goalType === 'gain'
-      ? `${tdee + 300}–${tdee + 500}`
-      : `${tdee - 500}–${tdee - 300}`
-    : null
+  const isAdmin = (s.email ?? '').trim().toLowerCase() === ADMIN_EMAIL
 
-  function handleProfileSave() {
-    const parsed = parseFloat(goalWeight)
-    if (!name.trim() || isNaN(parsed) || parsed <= 0) return
-    onSaveSettings({
-      ...userSettings,
-      name: name.trim(),
-      goalWeight: parsed,
-      height: parseFloat(height) || userSettings.height,
-      injectionInterval,
-      goalType,
-      unitSystem,
-      proteinGoal: parseFloat(proteinGoal) || null,
-    })
-    setProfileSaved(true)
-    setTimeout(() => setProfileSaved(false), 2000)
+  // Unit helpers
+  const isMetric = s.unitSystem !== 'us'
+  const wUnit    = isMetric ? 'kg' : 'lb'
+  function wFmt(kg, dec = 1) {
+    if (!kg && kg !== 0) return ''
+    return isMetric ? parseFloat(kg).toFixed(dec) : (parseFloat(kg) * 2.2046).toFixed(dec)
   }
+  function wParse(display) {
+    const v = parseFloat(display)
+    if (isNaN(v)) return null
+    return isMetric ? v : v / 2.2046
+  }
+
+  // ── Profile stats (computed from logs) ──────────────────────────────────────
+  const logCount    = Object.keys(logs).length
+  const weightLogs  = Object.entries(logs)
+    .filter(([, e]) => e.weight)
+    .sort(([a], [b]) => a.localeCompare(b))
+  const latestWt    = weightLogs.length ? parseFloat(weightLogs[weightLogs.length - 1][1].weight) : null
+  const startWt     = parseFloat(s.startWeight) || null
+  const lostKg      = startWt && latestWt && startWt > latestWt ? +(startWt - latestWt).toFixed(1) : null
+  const lostDisplay = lostKg ? wFmt(lostKg) : null
+
+  const refDate    = s.startDate || s.lastInjectionDate
+  const daysSince  = refDate ? Math.max(0, Math.floor((Date.now() - new Date(refDate + 'T12:00:00')) / 86400000)) : null
+  const weeksSince = refDate ? Math.max(0, Math.floor(daysSince / 7)) : null
+
+  // ── Local state ──────────────────────────────────────────────────────────────
+
+  // Profile edit
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [editName,  setEditName]  = useState(s.name)
+  const [editEmail, setEditEmail] = useState(s.email ?? '')
+
+  // Medication
+  const [medication,         setMedicationLocal]  = useState(s.medication ?? 'semaglutide')
+  const [dose,               setDoseLocal]        = useState(String(s.dose ?? '1.0'))
+  const [injectionDay,       setInjDayLocal]      = useState(s.injectionDay ?? 'Friday')
+  const [reminderEnabled,    setReminderLocal]    = useState(s.reminderEnabled ?? true)
+  const [autoTitration,      setAutoTitLocal]     = useState(s.autoTitrationAlert ?? false)
+
+  // Targets
+  const [goalType,      setGoalTypeLocal]    = useState(s.goalType ?? 'lose')
+  const [goalWeight,    setGoalWeightLocal]  = useState(wFmt(s.goalWeight || 0, 0))
+  const [pace,          setPaceLocal]        = useState(isMetric ? String(s.pace ?? '0.5') : String(((s.pace ?? 0.5) * 2.2046).toFixed(1)))
+  const [proteinGoal,   setProteinLocal]     = useState(String(s.proteinGoal ?? ''))
+  const [waterGoal,     setWaterLocal]       = useState(String(s.dailyWaterGoal ?? '8'))
+
+  // Privacy
+  const [faceId,     setFaceId]    = useState(false)
+  const [analytics,  setAnalytics] = useState(false)
+
+  // Editing row
+  const [openRow, setOpenRow] = useState(null)
+
+  // Toast
+  const [toast, setToast] = useState(null)
+
+  // Easter egg: 3-tap footer → admin
+  const [footerTaps, setFooterTaps] = useState(0)
+
+  function showToast(msg) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2200)
+  }
+
+  // ── Save helpers ─────────────────────────────────────────────────────────────
+
+  function save(patch) {
+    onSaveSettings({ ...s, ...patch })
+  }
+
+  function toggleRow(key) {
+    setOpenRow(prev => prev === key ? null : key)
+  }
+
+  // ── Profile save ─────────────────────────────────────────────────────────────
+  function saveProfile() {
+    if (!editName.trim()) return
+    save({ name: editName.trim(), email: editEmail.trim() })
+    setEditingProfile(false)
+    showToast('Profile updated')
+  }
+
+  // ── Medication saves ─────────────────────────────────────────────────────────
+  function saveMedication(val) { setMedicationLocal(val); save({ medication: val }) }
+  function saveDose()          { const v = parseFloat(dose); if (!isNaN(v)) { save({ dose: v }); setOpenRow(null) } }
+  function saveInjDay(val)     {
+    setInjDayLocal(val)
+    save({ injectionDay: val, lastInjectionDate: lastOccurrenceOf(val) })
+  }
+
+  // ── Targets saves ────────────────────────────────────────────────────────────
+  function saveGoalType(val)  { setGoalTypeLocal(val); save({ goalType: val }) }
+  function saveGoalWeight()   {
+    const kg = wParse(goalWeight)
+    if (kg) { save({ goalWeight: kg }); setOpenRow(null) }
+  }
+  function savePace() {
+    const v = parseFloat(pace)
+    if (!isNaN(v)) { save({ pace: isMetric ? v : +(v / 2.2046).toFixed(3) }); setOpenRow(null) }
+  }
+  function saveProtein() {
+    const v = parseFloat(proteinGoal)
+    save({ proteinGoal: isNaN(v) ? null : v }); setOpenRow(null)
+  }
+  function saveWater() {
+    const v = parseFloat(waterGoal)
+    if (!isNaN(v)) { save({ dailyWaterGoal: v }); setOpenRow(null) }
+  }
+
+  // ── Account ──────────────────────────────────────────────────────────────────
+  function handleSignOut() {
+    if (window.confirm('Sign out of GetTrendli?')) {
+      if (onSignOut) { onSignOut(); return }   // cloud mode: ends the Supabase session
+      localStorage.clear(); window.location.reload()
+    }
+  }
+  function handleResetData() {
+    if (window.confirm('Clear all logs and measurements? Your profile settings will be kept.')) {
+      localStorage.removeItem('gt_logs')
+      localStorage.removeItem('gt_measurements')
+      window.location.reload()
+    }
+  }
+  function handleDeleteAccount() {
+    if (window.confirm('Delete your account and all data? This cannot be undone.')) {
+      localStorage.clear(); window.location.reload()
+    }
+  }
+
+  // Export all of the user's data as a JSON file they can keep or move.
+  function handleExportData() {
+    const readJSON = (key, fallback) => {
+      try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback } catch { return fallback }
+    }
+    const payload = {
+      app: 'GetTrendli',
+      version: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      settings: readJSON('gt_settings', {}),
+      logs: readJSON('gt_logs', {}),
+      measurements: readJSON('gt_measurements', []),
+      nonScaleVictories: readJSON('gt_nsvs', []),
+    }
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url
+      a.download = `trendli-export-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      showToast('Data exported')
+    } catch {
+      showToast('Export failed')
+    }
+  }
+
+  // ── Derived display values ───────────────────────────────────────────────────
+  const medName      = MEDICATIONS.find(m => m.id === medication)?.name ?? 'Semaglutide'
+  const paceDisplay  = isMetric ? `${pace} kg / wk` : `${pace} lb / wk`
+  const gwDisplay    = goalWeight ? `${goalWeight} ${wUnit}` : '—'
+  const protDisplay  = proteinGoal ? `${proteinGoal} g` : '—'
+  const waterDisplay = waterGoal ? `${waterGoal} cups` : '—'
 
   return (
     <div className={styles.shell}>
       <div className={styles.page}>
+        <div className={styles.scrollContent} style={{ padding: '0 0 120px', gap: 0 }}>
 
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <header className={styles.header}>
-          <div>
-            <Eyebrow>Settings</Eyebrow>
-            <h1 style={{ fontFamily: FONT.ui, fontSize: 28, fontWeight: 500, letterSpacing: '-0.035em', marginTop: 4, color: T.text }}>You.</h1>
+          <TrialBanner entitlements={entitlements} onUpgrade={onUpgrade} />
+
+          {/* ── Header ─────────────────────────────────────────── */}
+          <div style={{ padding: '22px 20px 16px' }}>
+            <Eyebrow style={{ marginBottom: 6 }}>Settings</Eyebrow>
+            <h1 style={{ fontFamily: FONT.ui, fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', margin: 0, color: T.text }}>
+              You.
+            </h1>
           </div>
-        </header>
 
-        <div className={styles.scrollContent}>
+          {/* ── Profile card ───────────────────────────────────── */}
+          <div style={{ margin: '0 16px 20px' }}>
+            <div style={{ background: T.card, border: `1px solid ${T.hair}`, borderRadius: 18, padding: '18px 18px 16px' }}>
+              {!editingProfile ? (
+                <>
+                  {/* Avatar + name + edit */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 52, height: 52, borderRadius: 26,
+                      background: T.ink, color: T.inkText,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: FONT.ui, fontWeight: 700, fontSize: 17, letterSpacing: '-0.01em',
+                      flexShrink: 0,
+                    }}>
+                      {nameInitials(s.name || 'U')}
+                    </div>
+                    {/* Name + email + day */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: FONT.ui, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: T.text, lineHeight: 1.2 }}>
+                        {s.name || 'Your name'}
+                      </div>
+                      <div style={{ fontFamily: FONT.mono, fontSize: 9.5, color: T.mute, letterSpacing: '0.08em', marginTop: 3 }}>
+                        {s.email ? s.email.toUpperCase() : 'ADD EMAIL'}
+                        {daysSince != null ? ` · DAY ${padDay(daysSince)}` : ''}
+                      </div>
+                    </div>
+                    {/* Edit button */}
+                    <button
+                      type="button"
+                      onClick={() => { setEditName(s.name); setEditEmail(s.email ?? ''); setEditingProfile(true) }}
+                      style={{
+                        padding: '6px 14px', borderRadius: 20,
+                        border: `1px solid ${T.hair}`, background: 'transparent',
+                        fontFamily: FONT.mono, fontSize: 9, fontWeight: 600,
+                        letterSpacing: '0.10em', color: T.mute, cursor: 'pointer',
+                      }}
+                    >EDIT</button>
+                  </div>
 
-          {/* ── Profile ──────────────────────────────────────────── */}
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Profile</h2>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Name</label>
-              <div className={styles.inputRow}>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Your name"
-                />
-              </div>
-            </div>
-
-            <div className={styles.twoCol}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>Goal weight</label>
-                <div className={styles.inputRow}>
-                  <input
-                    className={styles.input}
-                    type="number"
-                    inputMode="decimal"
-                    value={goalWeight}
-                    onChange={e => setGoalWeight(e.target.value)}
-                    placeholder="e.g. 75"
-                  />
-                  <span className={styles.unit}>kg</span>
+                  {/* Stats row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.hair}` }}>
+                    {[
+                      { val: lostDisplay ? `${lostDisplay} ${wUnit}` : '—',  label: 'LOST'     },
+                      { val: weeksSince != null ? `${weeksSince} wks`  : '—', label: 'ON DOSE'  },
+                      { val: logCount > 0 ? String(logCount) : '—',           label: 'LOGS'     },
+                    ].map(st => (
+                      <div key={st.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <span style={{
+                          fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 22,
+                          color: T.text, letterSpacing: '-0.02em', lineHeight: 1,
+                        }}>{st.val}</span>
+                        <span style={{ fontFamily: FONT.mono, fontSize: 8.5, color: T.mute, letterSpacing: '0.12em' }}>
+                          {st.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                /* Edit mode */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em' }}>EDIT PROFILE</div>
+                  {[
+                    { label: 'Name', val: editName, set: setEditName, type: 'text', placeholder: 'Your name' },
+                    { label: 'Email', val: editEmail, set: setEditEmail, type: 'email', placeholder: 'your@email.com' },
+                  ].map(f => (
+                    <div key={f.label}>
+                      <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.10em', marginBottom: 5 }}>{f.label.toUpperCase()}</div>
+                      <input
+                        type={f.type}
+                        value={f.val}
+                        onChange={e => f.set(e.target.value)}
+                        placeholder={f.placeholder}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: 10, boxSizing: 'border-box',
+                          border: `1px solid ${T.hair}`, outline: 0, background: T.surf2,
+                          fontFamily: FONT.ui, fontSize: 15, color: T.text, letterSpacing: '-0.01em',
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                    <button type="button" onClick={saveProfile} style={{
+                      flex: 1, padding: '11px 0', borderRadius: 12,
+                      background: T.ink, color: T.inkText, border: 0,
+                      fontFamily: FONT.ui, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    }}>Save</button>
+                    <button type="button" onClick={() => setEditingProfile(false)} style={{
+                      padding: '11px 18px', borderRadius: 12,
+                      background: 'transparent', border: `1px solid ${T.hair}`,
+                      fontFamily: FONT.ui, fontSize: 14, color: T.mute, cursor: 'pointer',
+                    }}>Cancel</button>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>Height</label>
-                <div className={styles.inputRow}>
-                  <input
-                    className={styles.input}
-                    type="number"
-                    inputMode="numeric"
-                    value={height}
-                    onChange={e => setHeight(e.target.value)}
-                    placeholder="165"
-                  />
-                  <span className={styles.unit}>cm</span>
-                </div>
-              </div>
+              )}
             </div>
+          </div>
 
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Injection frequency</label>
-              <div className={styles.toggle}>
-                {[7, 14].map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`${styles.toggleBtn} ${injectionInterval === n ? styles.toggleBtnActive : ''}`}
-                    onClick={() => setInjInterval(n)}
-                  >
-                    Every {n} days
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Goal type</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { id: 'lose', label: 'Lose weight',  sub: 'Body recomposition', d: 'M6 9l6 6 6-6' },
-                  { id: 'gain', label: 'Build muscle',  sub: 'Gain · lean mass',   d: 'M6 15l6-6 6 6' },
-                ].map(g => {
-                  const on = goalType === g.id
+          {/* ── MEDICATION ─────────────────────────────────────── */}
+          <Eyebrow style={{ padding: '0 20px 8px', letterSpacing: '0.14em' }}>Medication</Eyebrow>
+          <ListCard>
+            <EditableRow
+              first label="Drug" value={medName}
+              isOpen={openRow === 'drug'}
+              onTap={() => toggleRow('drug')}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10 }}>
+                {MEDICATIONS.map(m => {
+                  const on = medication === m.id
                   return (
                     <button
-                      key={g.id}
+                      key={m.id}
                       type="button"
-                      onClick={() => setGoalType(g.id)}
+                      onClick={() => { saveMedication(m.id); setOpenRow(null) }}
                       style={{
-                        padding: '14px', textAlign: 'left', cursor: 'pointer',
-                        background: on ? T.ink : T.card,
-                        color: on ? T.inkText : T.text,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '12px 14px', borderRadius: 12,
                         border: `1px solid ${on ? T.ink : T.hair}`,
-                        borderRadius: 14, fontFamily: FONT.ui,
-                        display: 'flex', alignItems: 'center', gap: 12,
+                        background: on ? T.ink : T.surf2,
+                        cursor: 'pointer',
                       }}
                     >
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 14,
-                        background: on ? '#1a1a1a' : '#F3F2EE',
-                        border: on ? '1px solid #2a2a2a' : 'none',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0,
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d={g.d}/>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: on ? 600 : 500, color: on ? T.inkText : T.text }}>
+                          {m.name}
+                        </div>
+                        {m.brands && (
+                          <div style={{ fontFamily: FONT.mono, fontSize: 8.5, color: on ? 'rgba(250,250,247,0.5)' : T.faint, letterSpacing: '0.08em', marginTop: 2 }}>
+                            {m.brands}
+                          </div>
+                        )}
+                      </div>
+                      {on && (
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                          <path d="M3 8l4 4 6-6" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{g.label}</div>
-                        <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.08em', opacity: 0.65, marginTop: 2, textTransform: 'uppercase' }}>{g.sub}</div>
-                      </div>
+                      )}
                     </button>
                   )
                 })}
               </div>
-            </div>
+            </EditableRow>
 
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Units</label>
-              <div className={styles.toggle}>
-                {[
-                  { value: 'metric', label: 'Metric (kg / cm)' },
-                  { value: 'us',     label: 'US (lb / in)'     },
-                ].map(o => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    className={`${styles.toggleBtn} ${unitSystem === o.value ? styles.toggleBtnActive : ''}`}
-                    onClick={() => setUnitSystem(o.value)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <EditableRow
+              label="Dose" value={`${dose} mg`}
+              isOpen={openRow === 'dose'}
+              onTap={() => toggleRow('dose')}
+            >
+              <InlineInput
+                value={dose}
+                onChange={setDoseLocal}
+                onDone={saveDose}
+                unit="mg"
+                placeholder="1.0"
+                step="0.25"
+              />
+            </EditableRow>
 
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Daily protein goal <span className={styles.optionalTag}>optional</span></label>
-              <div className={styles.inputRow}>
-                <input
-                  className={styles.input}
-                  type="number"
-                  inputMode="numeric"
-                  value={proteinGoal}
-                  onChange={e => setProteinGoal(e.target.value)}
-                  placeholder="e.g. 160"
-                />
-                <span className={styles.unit}>g</span>
-              </div>
-              <p className={styles.fieldHint}>
-                {goalType === 'gain'
-                  ? 'Aim for ~1.6–2.2 g per kg of body weight to support muscle building.'
-                  : 'Aim for ~1.2–1.6 g per kg to preserve muscle while losing.'}
-              </p>
-            </div>
+            <EditableRow
+              label="Injection day" value={injectionDay}
+              isOpen={openRow === 'injday'}
+              onTap={() => toggleRow('injday')}
+            >
+              <ChipSelect
+                options={DAY_NAMES}
+                value={injectionDay}
+                onChange={val => { saveInjDay(val); setOpenRow(null) }}
+              />
+            </EditableRow>
 
-            <button className={`${styles.saveBtn} ${profileSaved ? styles.saveBtnDone : ''}`} onClick={handleProfileSave}>
-              {profileSaved ? '✓ Saved' : 'Save changes'}
-            </button>
-          </section>
+            <ToggleRow
+              label="Reminder"
+              value={reminderEnabled}
+              onChange={v => { setReminderLocal(v); save({ reminderEnabled: v }) }}
+            />
+            <ToggleRow
+              label="Auto-titration alert"
+              value={autoTitration}
+              onChange={v => { setAutoTitLocal(v); save({ autoTitrationAlert: v }) }}
+            />
+          </ListCard>
 
-          {/* ── TDEE Calculator ──────────────────────────────────── */}
-          <section className={styles.card}>
-            <div className={styles.cardTitleRow}>
-              <h2 className={styles.cardTitle}>TDEE calculator</h2>
-              <span className={styles.cardBadge}>Estimate</span>
-            </div>
-            <p className={styles.cardDesc}>
-              Your Total Daily Energy Expenditure is an estimate of how many calories your body
-              burns in a day. Use it as a rough starting point, not a precise target.
-            </p>
+          {/* ── TARGETS ────────────────────────────────────────── */}
+          <Eyebrow style={{ padding: '22px 20px 8px', letterSpacing: '0.14em' }}>Targets</Eyebrow>
 
-            {/* Sex toggle */}
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Biological sex</label>
-              <div className={styles.toggle}>
+          {/* Goal type tiles */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 12px' }}>
+            {[
+              { id: 'lose', label: 'Lose weight',  sub: 'BODY RECOMPOSITION', d: 'M6 9l6 6 6-6' },
+              { id: 'gain', label: 'Build muscle',  sub: 'GAIN · LEAN MASS',   d: 'M6 15l6-6 6 6' },
+            ].map(g => {
+              const on = goalType === g.id
+              return (
                 <button
-                  className={`${styles.toggleBtn} ${sex === 'female' ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setSex('female')}
-                >Female</button>
-                <button
-                  className={`${styles.toggleBtn} ${sex === 'male' ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setSex('male')}
-                >Male</button>
-              </div>
-            </div>
-
-            <div className={styles.twoCol}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>Age</label>
-                <div className={styles.inputRow}>
-                  <input
-                    className={styles.input}
-                    type="number"
-                    inputMode="numeric"
-                    value={age}
-                    onChange={e => setAge(e.target.value)}
-                    placeholder="35"
-                  />
-                  <span className={styles.unit}>yrs</span>
-                </div>
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.label}>Height</label>
-                <div className={styles.inputRow}>
-                  <input
-                    className={styles.input}
-                    type="number"
-                    inputMode="numeric"
-                    value={tdeeHeight}
-                    onChange={e => setTdeeHeight(e.target.value)}
-                    placeholder="165"
-                  />
-                  <span className={styles.unit}>cm</span>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Current weight</label>
-              <div className={styles.inputRow}>
-                <input
-                  className={styles.input}
-                  type="number"
-                  inputMode="decimal"
-                  value={tdeeWeight}
-                  onChange={e => setTdeeWeight(e.target.value)}
-                  placeholder="83.4"
-                />
-                <span className={styles.unit}>kg</span>
-              </div>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Activity level</label>
-              <div className={styles.selectWrap}>
-                <select
-                  className={styles.select}
-                  value={activity}
-                  onChange={e => setActivity(e.target.value)}
+                  key={g.id}
+                  type="button"
+                  onClick={() => saveGoalType(g.id)}
+                  style={{
+                    padding: '14px', textAlign: 'left', cursor: 'pointer',
+                    background: on ? T.ink : T.card,
+                    color: on ? T.inkText : T.text,
+                    border: `1px solid ${on ? T.ink : T.hair}`,
+                    borderRadius: 14, fontFamily: FONT.ui,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                  }}
                 >
-                  {activityOptions.map(o => (
-                    <option key={o.value} value={o.value}>{o.label} — {o.sub}</option>
-                  ))}
-                </select>
-                <svg className={styles.selectChevron} width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 14,
+                    background: on ? '#1a1a1a' : T.surf2,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke={on ? T.inkText : T.mute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={g.d}/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{g.label}</div>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 8, letterSpacing: '0.08em', opacity: 0.55, marginTop: 2, textTransform: 'uppercase' }}>{g.sub}</div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <ListCard>
+            <EditableRow
+              first label="Goal weight" value={gwDisplay}
+              isOpen={openRow === 'gw'}
+              onTap={() => toggleRow('gw')}
+            >
+              <InlineInput
+                value={goalWeight}
+                onChange={setGoalWeightLocal}
+                onDone={saveGoalWeight}
+                unit={wUnit}
+                placeholder={isMetric ? '75' : '165'}
+              />
+            </EditableRow>
+
+            <EditableRow
+              label="Pace" value={paceDisplay}
+              isOpen={openRow === 'pace'}
+              onTap={() => toggleRow('pace')}
+            >
+              <InlineInput
+                value={pace}
+                onChange={setPaceLocal}
+                onDone={savePace}
+                unit={`${wUnit} / wk`}
+                placeholder={isMetric ? '0.5' : '1.1'}
+              />
+            </EditableRow>
+
+            <EditableRow
+              label="Daily protein" value={protDisplay}
+              isOpen={openRow === 'protein'}
+              onTap={() => toggleRow('protein')}
+            >
+              <InlineInput
+                value={proteinGoal}
+                onChange={setProteinLocal}
+                onDone={saveProtein}
+                unit="g"
+                placeholder="120"
+              />
+            </EditableRow>
+
+            <EditableRow
+              label="Daily water" value={waterDisplay}
+              isOpen={openRow === 'water'}
+              onTap={() => toggleRow('water')}
+            >
+              <InlineInput
+                value={waterGoal}
+                onChange={setWaterLocal}
+                onDone={saveWater}
+                unit="cups"
+                placeholder="8"
+                step="1"
+              />
+            </EditableRow>
+          </ListCard>
+
+          {/* ── PRIVACY & DATA ──────────────────────────────────── */}
+          <Eyebrow style={{ padding: '22px 20px 8px', letterSpacing: '0.14em' }}>Privacy &amp; Data</Eyebrow>
+          <ListCard>
+            <ToggleRow first label="Use Face ID"           value={faceId}    onChange={setFaceId} />
+            <ToggleRow       label="Anonymous analytics"   value={analytics} onChange={setAnalytics} />
+            <ChevronRow      label="Export data"           value="JSON" onTap={handleExportData} />
+          </ListCard>
+
+          {/* ── ACCOUNT ────────────────────────────────────────── */}
+          <Eyebrow style={{ padding: '22px 20px 8px', letterSpacing: '0.14em' }}>Account</Eyebrow>
+          <ListCard>
+            <ChevronRow first label="Subscription"
+              value={
+                entitlements?.subscribed   ? 'GetTrendli Plus · Active'
+                : entitlements?.trialActive ? `Free trial · ${entitlements.daysLeft}d left`
+                : entitlements?.trialEnded  ? 'Trial ended'
+                : 'GetTrendli Plus'
+              }
+              onTap={entitlements?.subscribed ? () => showToast('GetTrendli Plus is active') : onUpgrade} />
+            <ChevronRow       label="Send feedback" value=""             onTap={() => showToast('Thanks for using GetTrendli!')} />
+            {isAdmin && <ChevronRow label="Admin" value="Operations" onTap={() => onNavigate('admin')} />}
+            <ChevronRow       label="Reset all logs" isRed onTap={handleResetData} />
+            <ChevronRow       label="Sign out"       isRed onTap={handleSignOut} />
+            <ChevronRow       label="Delete account" isRed onTap={handleDeleteAccount} />
+          </ListCard>
+
+          {/* ── Footer ─────────────────────────────────────────── */}
+          <div style={{ textAlign: 'center', padding: '28px 0 12px' }}>
+            <div
+              style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, color: T.mute, letterSpacing: '-0.01em', userSelect: 'none', cursor: 'default' }}
+              onClick={() => {
+                const n = footerTaps + 1
+                setFooterTaps(n)
+                if (n >= 3) { setFooterTaps(0); onNavigate('admin') }
+              }}
+            >
+              GetTrendli
             </div>
+            <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.12em', marginTop: 4 }}>
+              VERSION {APP_VERSION} · BUILD {APP_BUILD}
+            </div>
+          </div>
 
-            {/* Result */}
-            {tdee ? (
-              <div className={styles.result}>
-                <div className={styles.resultRow}>
-                  <div className={styles.resultStat}>
-                    <span className={styles.resultLabel}>Estimated TDEE</span>
-                    <span className={styles.resultValue}>{tdee.toLocaleString()}</span>
-                    <span className={styles.resultUnit}>kcal / day</span>
-                  </div>
-                  <div className={styles.resultDivider} />
-                  <div className={styles.resultStat}>
-                    <span className={styles.resultLabel}>Suggested range</span>
-                    <span className={styles.resultValue}>{suggested}</span>
-                    <span className={styles.resultUnit}>kcal / day</span>
-                  </div>
-                </div>
-                <p className={styles.resultNote}>
-                  {goalType === 'gain'
-                    ? 'Suggested range is 300–500 kcal above your TDEE — a lean bulk surplus to build muscle without excess fat.'
-                    : 'Suggested range is 300–500 kcal below your TDEE — a common starting point for gradual loss.'}
-                  {' '}Discuss your actual target with your care team.
-                </p>
-              </div>
-            ) : (
-              <div className={styles.resultEmpty}>
-                Fill in your details above to see your estimate.
-              </div>
-            )}
-          </section>
-
-          {/* ── Disclaimer ────────────────────────────────────────── */}
-          <p className={styles.disclaimer}>
-            All calculations are estimates based on general formulas and are for informational
-            purposes only. They are not medical advice.
-          </p>
-
-          <div className={styles.bottomSpacer} />
         </div>
 
-        {/* ── Bottom nav ───────────────────────────────────────────── */}
+        {/* ── Tab bar ─────────────────────────────────────────── */}
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40 }}>
           <TabBar active="profile" onTab={onNavigate} />
+        </div>
+
+        {/* ── Toast ───────────────────────────────────────────── */}
+        <div style={{
+          position: 'fixed', bottom: 100, left: '50%',
+          transform: `translateX(-50%) translateY(${toast ? 0 : 16}px)`,
+          opacity: toast ? 1 : 0, transition: 'all 0.22s',
+          background: T.ink, color: T.inkText,
+          borderRadius: 20, padding: '10px 18px',
+          fontFamily: FONT.ui, fontSize: 13, fontWeight: 500,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.18)', zIndex: 60,
+          pointerEvents: 'none', whiteSpace: 'nowrap',
+        }}>
+          {toast}
         </div>
 
       </div>
     </div>
   )
 }
-

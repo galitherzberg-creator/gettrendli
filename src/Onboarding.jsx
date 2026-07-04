@@ -4,14 +4,14 @@ import { T, FONT, Eyebrow, Toggle } from './tokens'
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const MEDICATIONS = [
-  { id: 'semaglutide', name: 'Semaglutide', brands: 'OZEMPIC · WEGOVY'    },
-  { id: 'tirzepatide', name: 'Tirzepatide', brands: 'MOUNJARO · ZEPBOUND' },
-  { id: 'liraglutide', name: 'Liraglutide', brands: 'SAXENDA · VICTOZA'   },
+  { id: 'semaglutide', name: 'Semaglutide',       brands: 'OZEMPIC · WEGOVY'       },
+  { id: 'tirzepatide', name: 'Tirzepatide',        brands: 'MOUNJARO · ZEPBOUND'    },
+  { id: 'liraglutide', name: 'Liraglutide',        brands: 'SAXENDA · VICTOZA'       },
+  { id: 'none',        name: 'Not on medication',  brands: 'STARTING SOON · NO MED' },
 ]
 
 const DAY_NAMES  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-const PACE_MAP   = [0.5, 1.0, 2.0]
-const PACE_LABEL = ['Gentle · 0.5', 'Steady · 1.0', 'Aggressive · 2.0']
+const PACE_MAP   = [0.5, 1.0, 2.0]   // kg/wk
 
 /** Returns the ISO date of the most-recent occurrence of dayIndex (0=Sun…6=Sat) */
 function lastOccurrence(dayIndex) {
@@ -126,7 +126,7 @@ function Step1({ name, setName, pronouns, setPronouns, onNext, onAnonymous, onBa
         Let's start with your name.
       </h1>
       <p style={{ fontFamily: FONT.ui, fontSize: 15, color: T.mute, lineHeight: 1.5, marginBottom: 36 }}>
-        Trendli is a quiet companion through your protocol.
+        GetTrendli is a quiet companion through your protocol.
       </p>
 
       {/* Name — large serif italic input */}
@@ -188,7 +188,7 @@ function Step1({ name, setName, pronouns, setPronouns, onNext, onAnonymous, onBa
           <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.5"/>
         </svg>
         <p style={{ fontFamily: FONT.ui, fontSize: 12, color: T.text, lineHeight: 1.5, margin: 0 }}>
-          Trendli isn't a diagnosis tool. Always follow your prescribing clinician's plan.
+          GetTrendli isn't a diagnosis tool. Always follow your prescribing clinician's plan.
         </p>
       </div>
     </StepShell>
@@ -197,23 +197,36 @@ function Step1({ name, setName, pronouns, setPronouns, onNext, onAnonymous, onBa
 
 // ── Step 2 — The Numbers ───────────────────────────────────────────────────────
 
-function Step2({ goalType, setGoalType, startWeight, setStartWeight, goalWeight, setGoalWeight, pace, setPace, onNext, onBack }) {
+function Step2({ goalType, setGoalType, startWeight, setStartWeight, goalWeight, setGoalWeight,
+                 pace, setPace, unitSystem, setUnitSystem, onNext, onBack }) {
   const [err, setErr] = useState(false)
+  const isUS  = unitSystem === 'us'
+  const wUnit = isUS ? 'LB' : 'KG'
 
   function handleNext() {
     if (!startWeight || !goalWeight) { setErr(true); return }
     onNext()
   }
 
-  const Stepper = ({ value, onChange, color = T.mute }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-      <button onClick={() => onChange(v => Math.max(30, +(v - 0.5).toFixed(1)))}
-        style={{ background: 'none', border: 0, color, cursor: 'pointer', fontSize: 20, padding: '0 4px', lineHeight: 1 }}>−</button>
-      <span style={{ fontFamily: FONT.mono, fontSize: 9, color, letterSpacing: '0.12em' }}>EDIT</span>
-      <button onClick={() => onChange(v => +(v + 0.5).toFixed(1))}
-        style={{ background: 'none', border: 0, color, cursor: 'pointer', fontSize: 20, padding: '0 4px', lineHeight: 1 }}>+</button>
-    </div>
-  )
+  function switchUnit(next) {
+    const toUS = next === 'us'
+    setStartWeight(v => {
+      const n = parseFloat(v); if (!n) return v
+      return String(toUS ? +(n * 2.2046).toFixed(1) : +(n / 2.2046).toFixed(1))
+    })
+    setGoalWeight(v => {
+      const n = parseFloat(v); if (!n) return v
+      return String(toUS ? +(n * 2.2046).toFixed(1) : +(n / 2.2046).toFixed(1))
+    })
+    setUnitSystem(next)
+  }
+
+  // Pace display: internally stored as kg/wk index, show converted label
+  const paceKg   = PACE_MAP[pace]
+  const paceDisp = isUS ? (paceKg * 2.2046).toFixed(1) : paceKg.toFixed(1)
+  const paceLabels = isUS
+    ? ['GENTLE 1.1', 'STEADY 2.2', 'AGGRESSIVE 4.4']
+    : ['GENTLE 0.5', 'STEADY 1.0', 'AGGRESSIVE 2.0']
 
   return (
     <StepShell step={2} onBack={onBack}
@@ -262,30 +275,76 @@ function Step2({ goalType, setGoalType, startWeight, setStartWeight, goalWeight,
         </div>
       </div>
 
+      {/* Weight section header: label + METRIC / US toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em' }}>WEIGHT</div>
+        {/* Unit chip switcher */}
+        <div style={{
+          display: 'flex', background: T.surf2, borderRadius: 20, padding: 2, gap: 2,
+        }}>
+          {['metric', 'us'].map(u => {
+            const on = unitSystem === u
+            return (
+              <button
+                key={u}
+                onClick={() => switchUnit(u)}
+                style={{
+                  padding: '4px 12px', borderRadius: 18, border: 'none', cursor: 'pointer',
+                  background: on ? T.ink : 'transparent',
+                  color: on ? T.inkText : T.mute,
+                  fontFamily: FONT.mono, fontSize: 9, fontWeight: on ? 700 : 400,
+                  letterSpacing: '0.10em', transition: 'all 0.15s',
+                }}
+              >
+                {u === 'metric' ? 'METRIC' : 'US'}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {err && <p style={{ fontFamily: FONT.ui, fontSize: 12, color: '#C0392B', marginBottom: 8 }}>Please set your current and goal weight.</p>}
+
       {/* Weight — TODAY / GOAL side-by-side cards */}
-      <div style={{ marginBottom: 22 }}>
-        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 10 }}>WEIGHT</div>
-        {err && <p style={{ fontFamily: FONT.ui, fontSize: 12, color: '#C0392B', marginBottom: 8 }}>Please set your current and goal weight.</p>}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
 
-          {/* TODAY — inverted black */}
-          <div style={{ background: T.ink, borderRadius: 14, padding: '16px 14px' }}>
-            <div style={{ fontFamily: FONT.mono, fontSize: 9, color: '#7a7a7a', letterSpacing: '0.12em', marginBottom: 6 }}>TODAY</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 44, color: T.inkText, letterSpacing: '-0.02em', lineHeight: 1 }}>{startWeight}</span>
-              <span style={{ fontFamily: FONT.mono, fontSize: 9, color: '#7a7a7a', letterSpacing: '0.08em' }}>KG</span>
-            </div>
-            <Stepper value={startWeight} onChange={setStartWeight} color="#7a7a7a" />
+        {/* TODAY — inverted black */}
+        <div style={{ background: T.ink, borderRadius: 14, padding: '16px 14px' }}>
+          <div style={{ fontFamily: FONT.mono, fontSize: 9, color: '#7a7a7a', letterSpacing: '0.12em', marginBottom: 6 }}>TODAY</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={startWeight}
+              onChange={e => setStartWeight(+e.target.value || 0)}
+              style={{
+                fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 44,
+                color: T.inkText, letterSpacing: '-0.02em', lineHeight: 1,
+                background: 'transparent', border: 'none', outline: 'none',
+                width: '100%', padding: 0, margin: 0,
+              }}
+            />
+            <span style={{ fontFamily: FONT.mono, fontSize: 9, color: '#7a7a7a', letterSpacing: '0.08em', flexShrink: 0 }}>{wUnit}</span>
           </div>
+        </div>
 
-          {/* GOAL — light */}
-          <div style={{ border: `1px solid ${T.hair}`, background: T.card, borderRadius: 14, padding: '16px 14px' }}>
-            <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>GOAL</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 44, color: T.text, letterSpacing: '-0.02em', lineHeight: 1 }}>{goalWeight}</span>
-              <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>KG</span>
-            </div>
-            <Stepper value={goalWeight} onChange={setGoalWeight} />
+        {/* GOAL — light */}
+        <div style={{ border: `1px solid ${T.hair}`, background: T.card, borderRadius: 14, padding: '16px 14px' }}>
+          <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>GOAL</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={goalWeight}
+              onChange={e => setGoalWeight(+e.target.value || 0)}
+              style={{
+                fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 44,
+                color: T.text, letterSpacing: '-0.02em', lineHeight: 1,
+                background: 'transparent', border: 'none', outline: 'none',
+                width: '100%', padding: 0, margin: 0,
+              }}
+            />
+            <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em', flexShrink: 0 }}>{wUnit}</span>
           </div>
         </div>
       </div>
@@ -295,7 +354,7 @@ function Step2({ goalType, setGoalType, startWeight, setStartWeight, goalWeight,
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em' }}>PACE</div>
           <div style={{ fontFamily: FONT.mono, fontSize: 10, color: T.text, letterSpacing: '0.06em' }}>
-            {PACE_MAP[pace]} KG / WK
+            {paceDisp} {wUnit} / WK
           </div>
         </div>
         <input
@@ -304,9 +363,7 @@ function Step2({ goalType, setGoalType, startWeight, setStartWeight, goalWeight,
           style={{ width: '100%', accentColor: T.accent, cursor: 'pointer', height: 4 }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.06em' }}>
-          <span>GENTLE 0.5</span>
-          <span>STEADY 1.0</span>
-          <span>AGGRESSIVE 2.0</span>
+          {paceLabels.map(l => <span key={l}>{l}</span>)}
         </div>
       </div>
     </StepShell>
@@ -315,15 +372,12 @@ function Step2({ goalType, setGoalType, startWeight, setStartWeight, goalWeight,
 
 // ── Step 3 — Your Protocol ─────────────────────────────────────────────────────
 
-function Step3({ medication, setMedication, dose, setDose, injectionDay, setInjectionDay, reminderEnabled, setReminderEnabled, onFinish, onNoMed, onBack }) {
+function Step3({ medication, setMedication, dose, setDose, injectionDay, setInjectionDay, reminderEnabled, setReminderEnabled, onFinish, onBack }) {
+  const noMed = medication === 'none'
+
   return (
     <StepShell step={3} onBack={onBack}
-      footer={
-        <>
-          <GhostBtn label="I'm not on medication yet" onClick={onNoMed} />
-          <BigBtn label="Finish setup" onClick={onFinish} />
-        </>
-      }
+      footer={<BigBtn label="Finish setup" onClick={onFinish} />}
     >
       <Eyebrow style={{ marginBottom: 16 }}>03 · Your Protocol</Eyebrow>
 
@@ -334,7 +388,7 @@ function Step3({ medication, setMedication, dose, setDose, injectionDay, setInje
         What are you taking?
       </h1>
 
-      {/* Medication radio list */}
+      {/* Medication radio list — all 4 options incl. "Not on medication" */}
       <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 10 }}>MEDICATION</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
         {MEDICATIONS.map(med => {
@@ -349,7 +403,9 @@ function Step3({ medication, setMedication, dose, setDose, injectionDay, setInje
             }}>
               <div>
                 <div style={{ fontFamily: FONT.ui, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em', color: on ? T.inkText : T.text }}>{med.name}</div>
-                <div style={{ fontFamily: FONT.mono, fontSize: 9, color: on ? '#7a7a7a' : T.mute, letterSpacing: '0.08em', marginTop: 3 }}>{med.brands}</div>
+                {med.brands && (
+                  <div style={{ fontFamily: FONT.mono, fontSize: 9, color: on ? '#7a7a7a' : T.mute, letterSpacing: '0.08em', marginTop: 3 }}>{med.brands}</div>
+                )}
               </div>
               {/* Radio dot */}
               <div style={{
@@ -365,51 +421,67 @@ function Step3({ medication, setMedication, dose, setDose, injectionDay, setInje
         })}
       </div>
 
-      {/* Dose + Day */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+      {/* Dose + Day + Reminder — hidden when "none" selected */}
+      {!noMed && (
+        <>
+          {/* Dose + Day */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
 
-        {/* Dose */}
-        <div style={{ border: `1px solid ${T.hair}`, borderRadius: 12, padding: '14px 16px', background: T.card }}>
-          <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>DOSE</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
-            <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 36, letterSpacing: '-0.02em', lineHeight: 1 }}>{dose.toFixed(1)}</span>
-            <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>MG</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setDose(d => Math.max(0.25, +(d - 0.25).toFixed(2)))}
-              style={{ background: 'none', border: 0, color: T.mute, cursor: 'pointer', fontSize: 20, padding: '0 4px', lineHeight: 1 }}>−</button>
-            <button onClick={() => setDose(d => Math.min(10, +(d + 0.25).toFixed(2)))}
-              style={{ background: 'none', border: 0, color: T.mute, cursor: 'pointer', fontSize: 20, padding: '0 4px', lineHeight: 1 }}>+</button>
-          </div>
-        </div>
+            {/* Dose */}
+            <div style={{ border: `1px solid ${T.hair}`, borderRadius: 12, padding: '14px 16px', background: T.card }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>DOSE</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.25"
+                  min="0.25"
+                  max="10"
+                  value={dose}
+                  onChange={e => {
+                    const v = parseFloat(e.target.value)
+                    if (!isNaN(v)) setDose(Math.min(10, Math.max(0.25, v)))
+                  }}
+                  style={{
+                    fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 36,
+                    letterSpacing: '-0.02em', lineHeight: 1,
+                    background: 'transparent', border: 'none', outline: 'none',
+                    width: '100%', padding: 0, margin: 0,
+                  }}
+                />
+                <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em', flexShrink: 0 }}>MG</span>
+              </div>
+            </div>
 
-        {/* Day */}
-        <div style={{ border: `1px solid ${T.hair}`, borderRadius: 12, padding: '14px 16px', background: T.card }}>
-          <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>DAY</div>
-          <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 26, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 10 }}>
-            {DAY_NAMES[injectionDay]}
+            {/* Day */}
+            <div style={{ border: `1px solid ${T.hair}`, borderRadius: 12, padding: '14px 16px', background: T.card }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 6 }}>DAY</div>
+              <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 26, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 10 }}>
+                {DAY_NAMES[injectionDay]}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => setInjectionDay(d => (d + 6) % 7)}
+                  style={{ background: 'none', border: 0, color: T.mute, cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>←</button>
+                <button onClick={() => setInjectionDay(d => (d + 1) % 7)}
+                  style={{ background: 'none', border: 0, color: T.mute, cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>→</button>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setInjectionDay(d => (d + 6) % 7)}
-              style={{ background: 'none', border: 0, color: T.mute, cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>←</button>
-            <button onClick={() => setInjectionDay(d => (d + 1) % 7)}
-              style={{ background: 'none', border: 0, color: T.mute, cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>→</button>
-          </div>
-        </div>
-      </div>
 
-      {/* Reminder */}
-      <div style={{
-        border: `1px solid ${T.hair}`, borderRadius: 12, padding: '14px 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: T.card,
-      }}>
-        <div>
-          <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>REMINDER</div>
-          <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 500, color: T.text }}>9:00 PM · 30 min before</div>
-        </div>
-        <Toggle on={reminderEnabled} onChange={setReminderEnabled} />
-      </div>
+          {/* Reminder */}
+          <div style={{
+            border: `1px solid ${T.hair}`, borderRadius: 12, padding: '14px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: T.card,
+          }}>
+            <div>
+              <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>REMINDER</div>
+              <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 500, color: T.text }}>9:00 PM · 30 min before</div>
+            </div>
+            <Toggle on={reminderEnabled} onChange={setReminderEnabled} />
+          </div>
+        </>
+      )}
     </StepShell>
   )
 }
@@ -424,10 +496,11 @@ export default function Onboarding({ onComplete }) {
   const [pronouns, setPronouns] = useState('')
 
   // Step 2
+  const [unitSystem,   setUnitSystem]   = useState('metric')
   const [goalType,     setGoalType]     = useState('lose')
-  const [startWeight,  setStartWeight]  = useState(96)
-  const [goalWeight,   setGoalWeight]   = useState(75)
-  const [pace,         setPace]         = useState(1)   // index into PACE_MAP
+  const [startWeight,  setStartWeight]  = useState('')   // display units — user must enter
+  const [goalWeight,   setGoalWeight]   = useState('')   // display units — user must enter
+  const [pace,         setPace]         = useState(1)    // index into PACE_MAP
 
   // Step 3
   const [medication,       setMedication]       = useState('semaglutide')
@@ -435,23 +508,29 @@ export default function Onboarding({ onComplete }) {
   const [injectionDay,     setInjectionDay]     = useState(5)   // 5 = Friday
   const [reminderEnabled,  setReminderEnabled]  = useState(true)
 
-  function finish(noMed = false) {
+  function finish() {
+    const noMed   = medication === 'none'
+    const isUS    = unitSystem === 'us'
+    // Always store weights in KG
+    const toKg    = v => { const n = parseFloat(v); return isUS ? n / 2.2046 : n }
+
     onComplete({
-      name:             name.trim() || 'Friend',
+      name:              name.trim() || 'Friend',
       pronouns,
-      startWeight,
-      goalWeight,
-      height:           165,   // adjustable in Settings
+      createdAt:         new Date().toISOString(),   // 3-month free trial starts now
+      startWeight:       startWeight ? +toKg(startWeight).toFixed(2) : 0,
+      goalWeight:        goalWeight  ? +toKg(goalWeight).toFixed(2)  : 0,
+      height:            165,
       goalType,
-      pace:             PACE_MAP[pace],
-      medication:       noMed ? null : medication,
-      dose:             noMed ? null : dose,
-      injectionDay:     noMed ? null : DAY_NAMES[injectionDay],
+      pace:              PACE_MAP[pace],
+      medication:        noMed ? null : medication,
+      dose:              noMed ? null : dose,
+      injectionDay:      noMed ? null : DAY_NAMES[injectionDay],
       injectionInterval: 7,
       lastInjectionDate: noMed ? null : lastOccurrence(injectionDay),
-      reminderEnabled:  !noMed && reminderEnabled,
-      proteinGoal:      null,
-      unitSystem:       'metric',
+      reminderEnabled:   !noMed && reminderEnabled,
+      proteinGoal:       null,
+      unitSystem,
     })
   }
 
@@ -467,10 +546,11 @@ export default function Onboarding({ onComplete }) {
 
   if (step === 2) return (
     <Step2
-      goalType={goalType}   setGoalType={setGoalType}
+      goalType={goalType}       setGoalType={setGoalType}
       startWeight={startWeight} setStartWeight={setStartWeight}
       goalWeight={goalWeight}   setGoalWeight={setGoalWeight}
-      pace={pace}           setPace={setPace}
+      pace={pace}               setPace={setPace}
+      unitSystem={unitSystem}   setUnitSystem={setUnitSystem}
       onNext={() => setStep(3)}
       onBack={() => setStep(1)}
     />
@@ -478,12 +558,11 @@ export default function Onboarding({ onComplete }) {
 
   return (
     <Step3
-      medication={medication}     setMedication={setMedication}
-      dose={dose}                 setDose={setDose}
-      injectionDay={injectionDay} setInjectionDay={setInjectionDay}
+      medication={medication}       setMedication={setMedication}
+      dose={dose}                   setDose={setDose}
+      injectionDay={injectionDay}   setInjectionDay={setInjectionDay}
       reminderEnabled={reminderEnabled} setReminderEnabled={setReminderEnabled}
-      onFinish={() => finish(false)}
-      onNoMed={() => finish(true)}
+      onFinish={finish}
       onBack={() => setStep(2)}
     />
   )

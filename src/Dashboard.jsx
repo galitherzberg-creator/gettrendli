@@ -1,8 +1,85 @@
 import { useState, useRef } from 'react'
 import { computeWeeklyData, getWeekLabel, todayISO, formatDate, isoDate } from './logStore'
 import { T, FONT, Eyebrow, Hairline, Card, BigNumber, TabBar } from './tokens'
+import { TrialBanner } from './entitlements'
 
-// ── Computation helpers (unchanged) ──────────────────────────────────────────
+// ── GLP-1 medication library ─────────────────────────────────────────────────
+const MEDICATIONS = [
+  {
+    id: 'wegovy', name: 'Wegovy', molecule: 'Semaglutide', freq: 'Weekly',
+    ladder: [
+      { label: '0.25', wks: '1–4'   },
+      { label: '0.5',  wks: '5–8'   },
+      { label: '1.0',  wks: '9–12'  },
+      { label: '1.7',  wks: '13–16' },
+      { label: '2.4',  wks: '17+'   },
+    ],
+  },
+  {
+    id: 'ozempic', name: 'Ozempic', molecule: 'Semaglutide', freq: 'Weekly',
+    ladder: [
+      { label: '0.25', wks: '1–4'  },
+      { label: '0.5',  wks: '5+'   },
+      { label: '1.0',  wks: 'opt.' },
+      { label: '2.0',  wks: 'max'  },
+    ],
+  },
+  {
+    id: 'mounjaro', name: 'Mounjaro', molecule: 'Tirzepatide', freq: 'Weekly',
+    ladder: [
+      { label: '2.5',  wks: '1–4'   },
+      { label: '5',    wks: '5–8'   },
+      { label: '7.5',  wks: '9–12'  },
+      { label: '10',   wks: '13–16' },
+      { label: '12.5', wks: '17–20' },
+      { label: '15',   wks: '21+'   },
+    ],
+  },
+  {
+    id: 'zepbound', name: 'Zepbound', molecule: 'Tirzepatide', freq: 'Weekly',
+    ladder: [
+      { label: '2.5',  wks: '1–4'   },
+      { label: '5',    wks: '5–8'   },
+      { label: '7.5',  wks: '9–12'  },
+      { label: '10',   wks: '13–16' },
+      { label: '12.5', wks: '17–20' },
+      { label: '15',   wks: '21+'   },
+    ],
+  },
+  {
+    id: 'saxenda', name: 'Saxenda', molecule: 'Liraglutide', freq: 'Daily',
+    ladder: [
+      { label: '0.6', wks: 'wk 1' },
+      { label: '1.2', wks: 'wk 2' },
+      { label: '1.8', wks: 'wk 3' },
+      { label: '2.4', wks: 'wk 4' },
+      { label: '3.0', wks: 'wk 5+'},
+    ],
+  },
+  {
+    id: 'trulicity', name: 'Trulicity', molecule: 'Dulaglutide', freq: 'Weekly',
+    ladder: [
+      { label: '0.75', wks: 'start'  },
+      { label: '1.5',  wks: 'maint.' },
+      { label: '3.0',  wks: 'step 3' },
+      { label: '4.5',  wks: 'max'    },
+    ],
+  },
+  {
+    id: 'victoza', name: 'Victoza', molecule: 'Liraglutide', freq: 'Daily',
+    ladder: [
+      { label: '0.6', wks: 'wk 1'   },
+      { label: '1.2', wks: 'maint.' },
+      { label: '1.8', wks: 'max'    },
+    ],
+  },
+  {
+    id: 'custom', name: 'Custom', molecule: 'Manual', freq: null,
+    ladder: [],  // user-defined steps
+  },
+]
+
+// ── Computation helpers ───────────────────────────────────────────────────────
 
 function computeStreak(logs) {
   let streak = 0
@@ -49,6 +126,17 @@ function computeDoseHistory(logs) {
     .sort(([a], [b]) => b.localeCompare(a))
     .slice(0, 6)
     .map(([, v]) => ({ date: v.injectionDate, dose: v.dose }))
+}
+
+function computeProtocol(logs) {
+  const injections = Object.values(logs)
+    .filter(e => e.injectionDate && e.dose)
+    .sort((a, b) => a.injectionDate.localeCompare(b.injectionDate))
+  if (!injections.length) return { weeksOn: null }
+  const firstDate = injections[0].injectionDate
+  const days      = Math.floor((new Date(todayISO + 'T12:00:00') - new Date(firstDate + 'T12:00:00')) / 86400000)
+  const weeksOn   = Math.max(1, Math.ceil((days + 1) / 7))
+  return { weeksOn }
 }
 
 function computeNextInjection(logs, userSettings) {
@@ -138,7 +226,7 @@ function computeProjection(logs, goalWeight, goalType = 'lose') {
 
 const PULL_THRESHOLD = 62
 
-export default function Dashboard({ logs, userSettings, onNavigate }) {
+export default function Dashboard({ logs, userSettings, onNavigate, updateLog, entitlements, onUpgrade }) {
   const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null, unitSystem = 'metric' } = userSettings
 
   // ── Unit helpers (weights stored in kg, display in lbs when US) ───────────
@@ -153,6 +241,69 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
   const [pullY, setPullY]           = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const touchStartY                 = useRef(0)
+
+  // Protocol — user-controlled, nothing auto-detected
+  const [protocolMed,  setProtocolMed]  = useState(() => {
+    try { return localStorage.getItem('gt_protocol_med') || '' } catch { return '' }
+  })
+  const [protocolStep, setProtocolStep] = useState(() => {
+    try { const s = localStorage.getItem('gt_protocol_step'); return s !== null ? parseInt(s, 10) : -1 } catch { return -1 }
+  })
+  const [customSteps,  setCustomSteps]  = useState(() => {
+    try { return JSON.parse(localStorage.getItem('gt_protocol_custom') || '[]') } catch { return [] }
+  })
+  const [customInput,  setCustomInput]  = useState('')
+
+  function changeMed(id) {
+    setProtocolMed(id)
+    setProtocolStep(-1)
+    try { localStorage.setItem('gt_protocol_med', id); localStorage.setItem('gt_protocol_step', '-1') } catch {}
+  }
+  function setStep(idx) {
+    const next = protocolStep === idx ? -1 : idx
+    setProtocolStep(next)
+    try { localStorage.setItem('gt_protocol_step', String(next)) } catch {}
+  }
+  function addCustomStep() {
+    const val = parseFloat(customInput)
+    if (isNaN(val) || val <= 0) return
+    const label = String(parseFloat(val.toFixed(2))).replace(/\.?0+$/, '') || String(val)
+    const next  = [...customSteps, { label, wks: '' }]
+      .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
+      .filter((s, i, arr) => arr.findIndex(x => x.label === s.label) === i)  // dedup
+    setCustomSteps(next); setProtocolStep(-1); setCustomInput('')
+    try { localStorage.setItem('gt_protocol_custom', JSON.stringify(next)); localStorage.setItem('gt_protocol_step', '-1') } catch {}
+  }
+  function removeCustomStep(idx) {
+    const next = customSteps.filter((_, i) => i !== idx)
+    setCustomSteps(next); setProtocolStep(-1)
+    try { localStorage.setItem('gt_protocol_custom', JSON.stringify(next)); localStorage.setItem('gt_protocol_step', '-1') } catch {}
+  }
+
+  // Active ladder = medication preset or user-built custom list
+  const activeMedObj  = MEDICATIONS.find(m => m.id === protocolMed)
+  const activeLadder  = protocolMed === 'custom' ? customSteps : (activeMedObj?.ladder ?? [])
+
+  // Injection inline edit
+  const [injOpen,     setInjOpen]     = useState(false)
+  const [injDate,     setInjDate]     = useState(todayISO)
+  const [injDose,     setInjDose]     = useState('')
+
+  function openInjEdit() {
+    // Pre-fill from last known injection
+    const last = Object.values(logs).filter(e => e.injectionDate && e.dose)
+      .sort((a, b) => (b.injectionDate > a.injectionDate ? 1 : -1))[0]
+    setInjDate(last?.injectionDate ?? todayISO)
+    setInjDose(last?.dose != null ? String(last.dose) : '')
+    setInjOpen(true)
+  }
+
+  function saveInjection() {
+    if (!injDate) return
+    const dose = parseFloat(injDose) || null
+    updateLog(injDate, { ...(logs[injDate] || {}), injectionDate: injDate, dose })
+    setInjOpen(false)
+  }
 
   function onTouchStart(e) {
     if (window.scrollY <= 0) touchStartY.current = e.touches[0].clientY
@@ -208,6 +359,7 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
   const sideEffects   = computeSideEffectTrends(logs)
   const doseHistory   = computeDoseHistory(logs)
   const projectedDate = computeProjection(logs, goalWeight, goalType)
+  const protocolData  = computeProtocol(logs)
 
   // Today's date display
   const todayDisplay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -253,6 +405,9 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
       )}
 
       <div style={{ maxWidth: 430, margin: '0 auto', paddingBottom: 100 }}>
+
+        {/* ── Trial / upgrade banner ───────────────────────────────── */}
+        <TrialBanner entitlements={entitlements} onUpgrade={onUpgrade} />
 
         {/* ── Header ───────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px 14px' }}>
@@ -395,9 +550,76 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
 
           {/* Injection countdown */}
           <Card padding={0} radius={14} style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '16px 16px 4px' }}>
+            <div style={{ padding: '16px 16px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Eyebrow>Next Injection</Eyebrow>
+              <button
+                onClick={openInjEdit}
+                style={{
+                  background: 'transparent', border: `1px solid ${T.hair}`, borderRadius: 6,
+                  padding: '3px 8px', cursor: 'pointer',
+                  fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.10em',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                  <path d="M2 9.5l1.5-.3 5.5-5.5-1.2-1.2L2.3 8 2 9.5Z"/>
+                </svg>
+                EDIT
+              </button>
             </div>
+
+            {/* Inline edit panel */}
+            {injOpen && (
+              <div style={{ padding: '10px 16px 14px', background: T.surf2, borderTop: `1px solid ${T.hair}` }}>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>DATE</div>
+                    <input
+                      type="date"
+                      value={injDate}
+                      max={todayISO}
+                      onChange={e => setInjDate(e.target.value)}
+                      style={{
+                        width: '100%', border: `1px solid ${T.hair}`, borderRadius: 8,
+                        padding: '7px 10px', fontFamily: FONT.ui, fontSize: 13,
+                        background: T.card, outline: 'none', boxSizing: 'border-box',
+                        color: T.text,
+                      }}
+                    />
+                  </div>
+                  <div style={{ width: 90 }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>DOSE (MG)</div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.25"
+                      value={injDose}
+                      onChange={e => setInjDose(e.target.value)}
+                      placeholder="1.0"
+                      style={{
+                        width: '100%', border: `1px solid ${T.hair}`, borderRadius: 8,
+                        padding: '7px 10px', fontFamily: FONT.ui, fontSize: 13,
+                        background: T.card, outline: 'none', boxSizing: 'border-box',
+                        color: T.text,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setInjOpen(false)} style={{
+                    flex: 1, padding: '9px 0', borderRadius: 10,
+                    border: `1px solid ${T.hair}`, background: 'transparent', cursor: 'pointer',
+                    fontFamily: FONT.ui, fontSize: 13, color: T.mute,
+                  }}>Cancel</button>
+                  <button onClick={saveInjection} style={{
+                    flex: 2, padding: '9px 0', borderRadius: 10,
+                    border: 0, background: T.ink, cursor: 'pointer',
+                    fontFamily: FONT.ui, fontSize: 13, fontWeight: 600, color: T.inkText,
+                  }}>Save injection</button>
+                </div>
+              </div>
+            )}
+
             {nextInj ? (
               <>
                 <div style={{ padding: '6px 16px 14px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -410,20 +632,21 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
                 <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontFamily: FONT.ui, fontSize: 13, fontWeight: 500 }}>
-                      {lastInjection?.dose ? `${lastInjection.dose} mg` : 'Set dose'}
+                      {lastInjection?.dose
+                        ? `${lastInjection.dose} mg`
+                        : userSettings.dose
+                          ? `${userSettings.dose} mg`
+                          : 'Set dose'}
                     </div>
                     <div style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.08em', marginTop: 2 }}>
                       {nextInj.nextDate}
                     </div>
                   </div>
-                  <div style={{ width: 28, height: 28, borderRadius: 14, background: T.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-                  </div>
                 </div>
               </>
             ) : (
               <div style={{ padding: '10px 16px 16px' }}>
-                <div style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute }}>Log your first injection to see countdown</div>
+                <div style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute }}>Tap EDIT to log your first injection</div>
               </div>
             )}
           </Card>
@@ -533,11 +756,11 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
             )}
 
             {/* Log button */}
-            <div style={{ padding: '0 16px 16px' }}>
+            <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
               <button
                 onClick={() => onNavigate('log')}
                 style={{
-                  width: '100%', height: 48, borderRadius: 12, border: 0,
+                  flex: 1, height: 48, borderRadius: 12, border: 0,
                   background: T.ink, color: T.inkText, cursor: 'pointer',
                   fontFamily: FONT.ui, fontSize: 14, fontWeight: 600,
                   letterSpacing: '-0.01em', marginTop: 4,
@@ -546,6 +769,23 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                 {loggedCount > 0 ? 'Update today' : 'Log today'}
+              </button>
+              {/* Past-day shortcut */}
+              <button
+                onClick={() => onNavigate('log')}
+                title="Log a past day"
+                style={{
+                  width: 48, height: 48, borderRadius: 12, marginTop: 4,
+                  border: `1px solid ${T.hair}`, background: 'transparent',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.mute} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <path d="M16 2v4M8 2v4M3 10h18"/>
+                  <path d="M8 14h4M8 18h6"/>
+                </svg>
               </button>
             </div>
           </Card>
@@ -606,29 +846,289 @@ export default function Dashboard({ logs, userSettings, onNavigate }) {
           </div>
         )}
 
-        {/* ── DOSE HISTORY ─────────────────────────────────────────── */}
-        {doseHistory.length > 0 && (
-          <div style={{ padding: '18px 16px 0' }}>
-            <div style={{ padding: '0 6px 10px' }}><Eyebrow>Dose history</Eyebrow></div>
-            <Card padding={0} radius={14}>
-              {doseHistory.map((entry, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', padding: '13px 16px',
-                  borderBottom: i === doseHistory.length - 1 ? 'none' : `1px solid ${T.hair}`,
-                  gap: 12,
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 4, background: T.accent, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontFamily: FONT.ui, fontSize: 13, color: T.mute }}>
-                    {formatDate(entry.date, { month: 'short', day: 'numeric' })}
-                  </span>
-                  <span style={{ fontFamily: FONT.mono, fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }}>
-                    {Number(entry.dose).toFixed(2)} mg
-                  </span>
+        {/* ── PROTOCOL PROGRESS ────────────────────────────────────── */}
+        <div style={{ padding: '18px 16px 0' }}>
+          <div style={{ padding: '0 6px 10px' }}><Eyebrow>Protocol progress</Eyebrow></div>
+          <Card padding={20} radius={14}>
+
+            {/* ── Medication selector ── */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 7.5, color: T.mute, letterSpacing: '0.12em', marginBottom: 10 }}>
+                MY MEDICATION
+              </div>
+              <div style={{
+                display: 'flex', gap: 6, overflowX: 'auto',
+                paddingBottom: 4, scrollbarWidth: 'none',
+              }}>
+                {MEDICATIONS.map(med => {
+                  const active = protocolMed === med.id
+                  return (
+                    <button
+                      key={med.id}
+                      onClick={() => changeMed(med.id)}
+                      style={{
+                        flexShrink: 0,
+                        padding: '6px 12px', borderRadius: 20,
+                        border: active ? 'none' : `1px solid ${T.hair}`,
+                        background: active ? T.ink : T.surf2,
+                        cursor: 'pointer',
+                        fontFamily: FONT.ui, fontSize: 12, fontWeight: active ? 600 : 400,
+                        color: active ? T.inkText : T.text,
+                        letterSpacing: '-0.01em',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {med.name}
+                    </button>
+                  )
+                })}
+              </div>
+              {activeMedObj && activeMedObj.id !== 'custom' && (
+                <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em', marginTop: 8 }}>
+                  {activeMedObj.molecule} · {activeMedObj.freq}
                 </div>
-              ))}
-            </Card>
-          </div>
-        )}
+              )}
+            </div>
+
+            {/* ── No medication chosen yet ── */}
+            {!protocolMed && (
+              <div style={{
+                padding: '18px 0 8px', textAlign: 'center',
+                fontFamily: FONT.ui, fontSize: 13, color: T.mute, lineHeight: 1.5,
+              }}>
+                Choose your medication above to see<br/>the dose escalation schedule.
+              </div>
+            )}
+
+            {/* ── Custom step builder ── */}
+            {protocolMed === 'custom' && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontFamily: FONT.mono, fontSize: 7.5, color: T.mute, letterSpacing: '0.12em', marginBottom: 10 }}>
+                  MY DOSE STEPS (MG)
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.25"
+                    value={customInput}
+                    onChange={e => setCustomInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addCustomStep()}
+                    placeholder="e.g. 2.5"
+                    style={{
+                      flex: 1, border: `1px solid ${T.hair}`, borderRadius: 10,
+                      padding: '9px 12px', fontFamily: FONT.ui, fontSize: 13,
+                      background: T.card, outline: 'none', color: T.text,
+                    }}
+                  />
+                  <button
+                    onClick={addCustomStep}
+                    style={{
+                      width: 44, height: 44, borderRadius: 10, border: 0,
+                      background: T.ink, color: T.inkText, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 20, flexShrink: 0,
+                    }}
+                  >+</button>
+                </div>
+                {customSteps.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {customSteps.map((s, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '4px 10px 4px 12px', borderRadius: 20,
+                        background: T.surf2, border: `1px solid ${T.hair}`,
+                      }}>
+                        <span style={{ fontFamily: FONT.mono, fontSize: 11, color: T.text }}>{s.label} mg</span>
+                        <button
+                          onClick={() => removeCustomStep(i)}
+                          style={{
+                            background: 'transparent', border: 0, padding: 0,
+                            cursor: 'pointer', color: T.mute, fontSize: 14, lineHeight: 1,
+                            display: 'flex', alignItems: 'center',
+                          }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {customSteps.length === 0 && (
+                  <div style={{ fontFamily: FONT.ui, fontSize: 12, color: T.mute }}>
+                    Add your dose steps above.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Ladder: week counter + current dose ── */}
+            {protocolMed && activeLadder.length > 0 && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+                  <div>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>
+                      WEEK ON PROTOCOL
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 40, color: T.text, lineHeight: 1 }}>
+                        {protocolData.weeksOn ?? '—'}
+                      </span>
+                      <span style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute }}>WK</span>
+                    </div>
+                  </div>
+                  {protocolStep >= 0 && protocolStep < activeLadder.length && (
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>
+                        MY DOSE
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, justifyContent: 'flex-end' }}>
+                        <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 40, color: T.accent, lineHeight: 1 }}>
+                          {activeLadder[protocolStep].label}
+                        </span>
+                        <span style={{ fontFamily: FONT.mono, fontSize: 10, color: T.accentDark }}>mg</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dose escalation ladder — tap to set your position */}
+                <div style={{ marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 7.5, color: T.mute, letterSpacing: '0.12em' }}>
+                      TAP YOUR CURRENT DOSE
+                    </div>
+                    {protocolStep >= 0 && (
+                      <button
+                        onClick={() => setStep(-1)}
+                        style={{
+                          background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
+                          fontFamily: FONT.mono, fontSize: 7.5, color: T.faint, letterSpacing: '0.08em',
+                        }}
+                      >
+                        CLEAR
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Circles + connectors */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {activeLadder.flatMap((step, i) => {
+                      const past   = i < protocolStep
+                      const active = i === protocolStep
+                      const nodes  = []
+                      nodes.push(
+                        <button
+                          key={`dot-${i}`}
+                          onClick={() => setStep(i)}
+                          style={{
+                            width: 36, height: 36, borderRadius: 18, flexShrink: 0,
+                            background: active ? T.ink : past ? T.accentSoft : T.surf2,
+                            border: active ? `2px solid ${T.ink}` : `1px solid ${past ? T.accentHair : T.hair}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer',
+                            boxShadow: active ? `0 0 0 3px ${T.accentSoft}` : 'none',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {past ? (
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                              <path d="M2.5 6.5l3 3 5-5" stroke={T.accentDark} strokeWidth="1.7"
+                                strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          ) : (
+                            <span style={{
+                              fontFamily: FONT.mono,
+                              fontSize: active ? 9 : 7.5,
+                              color: active ? T.inkText : T.faint,
+                              fontWeight: active ? 700 : 400,
+                              letterSpacing: '-0.01em',
+                            }}>
+                              {step.label}
+                            </span>
+                          )}
+                        </button>
+                      )
+                      if (i < activeLadder.length - 1) {
+                        nodes.push(
+                          <div key={`line-${i}`} style={{
+                            flex: 1, height: 2,
+                            background: i < protocolStep ? T.accent : T.hair,
+                            transition: 'background 0.15s',
+                          }} />
+                        )
+                      }
+                      return nodes
+                    })}
+                  </div>
+
+                  {/* Labels below circles */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 6 }}>
+                    {activeLadder.flatMap((step, i) => {
+                      const active = i === protocolStep
+                      const nodes  = []
+                      nodes.push(
+                        <div key={`lbl-${i}`} style={{ width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                          <span style={{ fontFamily: FONT.mono, fontSize: 7, color: active ? T.text : T.faint, fontWeight: active ? 700 : 400 }}>
+                            {step.label}mg
+                          </span>
+                          {step.wks ? (
+                            <span style={{ fontFamily: FONT.mono, fontSize: 6, color: T.faint }}>
+                              wk{step.wks}
+                            </span>
+                          ) : null}
+                        </div>
+                      )
+                      if (i < activeLadder.length - 1) nodes.push(<div key={`sp-${i}`} style={{ flex: 1 }} />)
+                      return nodes
+                    })}
+                  </div>
+                </div>
+
+                {/* Next step hint */}
+                {protocolStep >= 0 && protocolStep < activeLadder.length - 1 && (
+                  <div style={{
+                    marginTop: 14, padding: '9px 12px', borderRadius: 10,
+                    background: T.accentSoft,
+                    fontFamily: FONT.ui, fontSize: 11, color: T.accentDark, lineHeight: 1.45,
+                  }}>
+                    Next step: <strong>{activeLadder[protocolStep + 1].label} mg</strong> — discuss timing with your prescriber.
+                  </div>
+                )}
+                {protocolStep >= 0 && protocolStep === activeLadder.length - 1 && (
+                  <div style={{
+                    marginTop: 14, padding: '9px 12px', borderRadius: 10,
+                    background: T.accentSoft,
+                    fontFamily: FONT.ui, fontSize: 11, color: T.accentDark, lineHeight: 1.45,
+                  }}>
+                    🎯 Maintenance dose — great work staying consistent.
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Recent injections ── */}
+            {doseHistory.slice(0, 4).length > 0 && (
+              <div style={{ marginTop: 16, borderTop: `1px solid ${T.hair}`, paddingTop: 12 }}>
+                <div style={{ fontFamily: FONT.mono, fontSize: 7.5, color: T.mute, letterSpacing: '0.12em', marginBottom: 8 }}>
+                  RECENT INJECTIONS
+                </div>
+                {doseHistory.slice(0, 4).map((entry, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    paddingBottom: i < 3 ? 8 : 0,
+                  }}>
+                    <div style={{ width: 7, height: 7, borderRadius: 3.5, background: T.accent, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontFamily: FONT.ui, fontSize: 12, color: T.mute }}>
+                      {formatDate(entry.date, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </span>
+                    <span style={{ fontFamily: FONT.mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: T.text }}>
+                      {Number(entry.dose).toFixed(2)} mg
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
 
         {/* ── INSIGHTS LINK ────────────────────────────────────────── */}
         <div style={{ padding: '18px 16px 0' }}>

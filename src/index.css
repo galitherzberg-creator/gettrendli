@@ -4,8 +4,13 @@
   padding: 0;
 }
 
+/* Hide number input spinners globally */
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
 :root {
-  /* ── Trendli design tokens ── */
+  /* ── GetTrendli design tokens ── */
   --bg:          #FAFAF7;
   --card:        #FFFFFF;
   --ink:         #0A0A0A;

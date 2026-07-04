@@ -98,11 +98,11 @@ export function BigNumber({ value, unit, size = 64, color, italic = true, style 
 /** Bottom tab bar — 5 tabs, seafoam active */
 export function TabBar({ active = 'home', onTab }) {
   const items = [
-    { id: 'home',     label: 'Home',     d: 'M3 11l9-8 9 8M5 9.5V20h14V9.5' },
-    { id: 'log',      label: 'Log',      d: 'M12 5v14M5 12h14' },
-    { id: 'insights', label: 'Insights', d: 'M4 19h16M7 16V9M12 16V5M17 16v-4' },
-    { id: 'charts',   label: 'Charts',   d: 'M4 19h16M7 16V9M12 16V5M17 16v-4' },
-    { id: 'profile',  label: 'You',      d: 'M5 21c0-4 3-7 7-7s7 3 7 7M12 12a4 4 0 100-8 4 4 0 000 8z' },
+    { id: 'home',         label: 'Home',    d: 'M3 11l9-8 9 8M5 9.5V20h14V9.5' },
+    { id: 'log',          label: 'Log',     d: 'M12 5v14M5 12h14' },
+    { id: 'insights',     label: 'Insights',d: 'M4 19h16M7 16V9M12 16V5M17 16v-4' },
+    { id: 'measurements', label: 'Body',    d: 'M12 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm-5 9a5 5 0 0 1 10 0v2H7v-2zm-1 4h12v2H6v-2z' },
+    { id: 'profile',      label: 'You',     d: 'M5 21c0-4 3-7 7-7s7 3 7 7M12 12a4 4 0 100-8 4 4 0 000 8z' },
   ];
 
   return (
@@ -116,9 +116,7 @@ export function TabBar({ active = 'home', onTab }) {
       {items.map((it) => {
         const on = it.id === active;
         // Use different chart icon for charts tab
-        const d = it.id === 'charts'
-          ? 'M4 19h16M7 14V9M12 14V5M17 14v-4'
-          : it.d;
+        const d = it.d;
         return (
           <button key={it.id} onClick={() => onTab && onTab(it.id)} style={{
             background: 'none', border: 0, padding: 0, cursor: 'pointer',

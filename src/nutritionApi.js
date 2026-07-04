@@ -11,7 +11,7 @@ const API_KEY = import.meta.env.VITE_USDA_API_KEY || 'DEMO_KEY'
 const BASE    = 'https://api.nal.usda.gov/fdc/v1'
 
 // USDA nutrient IDs (stable identifiers in FoodData Central).
-const N = { kcal: 1008, protein: 1003, fat: 1004, carbs: 1005 }
+const N = { kcal: 1008, protein: 1003, fat: 1004, carbs: 1005, fiber: 1079 }
 
 // Pull a nutrient value (per 100 g) out of a search result's foodNutrients[].
 function pick(foodNutrients = [], id, nameMatch) {
@@ -35,6 +35,7 @@ function normalize(raw) {
       protein: +pick(raw.foodNutrients, N.protein, 'protein').toFixed(1),
       fat:     +pick(raw.foodNutrients, N.fat,     'fat').toFixed(1),
       carbs:   +pick(raw.foodNutrients, N.carbs,   'carbohydrate').toFixed(1),
+      fiber:   +pick(raw.foodNutrients, N.fiber,   'fiber').toFixed(1),
     },
   }
 }
@@ -72,6 +73,7 @@ export function scaleMacros(per100, grams) {
     protein: +(per100.protein * f).toFixed(1),
     fat:     +(per100.fat * f).toFixed(1),
     carbs:   +(per100.carbs * f).toFixed(1),
+    fiber:   +((per100.fiber || 0) * f).toFixed(1),
   }
 }
 

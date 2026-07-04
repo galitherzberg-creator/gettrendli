@@ -116,7 +116,7 @@ function WaterCups({ value, onChange }) {
 // ── Progress bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ value, goal, color = T.accent }) {
-  const pct = goal > 0 ? Math.min(100, (parseFloat(value) / parseFloat(goal)) * 100) : 0
+  const pct = parseFloat(goal) > 0 ? Math.min(100, (parseFloat(value) / parseFloat(goal)) * 100) : 0
   return (
     <div style={{ height: 3, background: T.hair, borderRadius: 2, overflow: 'hidden', marginTop: 6 }}>
       <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.3s' }} />
@@ -232,6 +232,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
   const [calories,         setCalories]          = useState('')
   const [protein,          setProtein]           = useState('')
   const [fat,              setFat]               = useState('')
+  const [fiber,            setFiber]             = useState('')
   const [foods,            setFoods]             = useState([])   // logged foods (from search)
   const [foodSearchOpen,   setFoodSearchOpen]    = useState(false)
   const [water,            setWater]             = useState(0)
@@ -260,7 +261,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
 
   const weightInputRef = useRef(null)
 
-  const { proteinGoal, unitSystem = 'metric' } = userSettings
+  const { proteinGoal, fiberGoal, unitSystem = 'metric' } = userSettings
   const isMetric = unitSystem !== 'us'
   const wUnit    = isMetric ? 'kg' : 'lb'
   function wFmt(kg, dec = 1) {
@@ -282,6 +283,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
       setCalories(entry.calories ?? '')
       setProtein(entry.protein ?? '')
       setFat(entry.fat ?? '')
+      setFiber(entry.fiber ?? '')
       setFoods(entry.foods ?? [])
       setWater(entry.water ?? 0)
       setMood(entry.mood ?? null)
@@ -297,7 +299,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
       setInjectionDate(entry.injectionDate ?? selectedDate)
       setDose(entry.dose ?? 0.5)
     } else {
-      setWeight(''); setCalories(''); setProtein(''); setFat(''); setFoods([])
+      setWeight(''); setCalories(''); setProtein(''); setFat(''); setFiber(''); setFoods([])
       setWater(0); setMood(null); setSideEffects([]); setHunger(40); setNote('')
       setWorkoutName(''); setWorkoutDate(''); setActivityType(''); setActivityDuration('')
       setSteps(''); setStepsGoal(10000)
@@ -314,6 +316,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
       calories:         calories || null,
       protein:          protein  || null,
       fat:              fat      || null,
+      fiber:            fiber    || null,
       foods:            foods.length ? foods : null,
       water,
       mood,
@@ -338,13 +341,14 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
   }
 
   // Add a food from search: append to the list and roll its macros into the
-  // Calories/Protein/Fat totals (which remain manually editable).
+  // Calories/Protein/Fat/Fiber totals (which remain manually editable).
   function handleAddFood(food) {
     setFoods(prev => [...prev, food])
-    const add = (cur, n) => String(+(Math.round(((parseFloat(cur) || 0) + n) * 10) / 10))
+    const add = (cur, n) => String(+(Math.round(((parseFloat(cur) || 0) + (n || 0)) * 10) / 10))
     setCalories(cur => add(cur, food.kcal))
     setProtein(cur => add(cur, food.protein))
     setFat(cur => add(cur, food.fat))
+    setFiber(cur => add(cur, food.fiber))
     setFoodSearchOpen(false)
   }
 
@@ -354,12 +358,13 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
     if (!food) return
     setFoods(prev => prev.filter((_, i) => i !== idx))
     const sub = (cur, n) => {
-      const v = Math.max(0, Math.round(((parseFloat(cur) || 0) - n) * 10) / 10)
+      const v = Math.max(0, Math.round(((parseFloat(cur) || 0) - (n || 0)) * 10) / 10)
       return v ? String(v) : ''
     }
     setCalories(cur => sub(cur, food.kcal))
     setProtein(cur => sub(cur, food.protein))
     setFat(cur => sub(cur, food.fat))
+    setFiber(cur => sub(cur, food.fiber))
   }
 
   const existingEntry = logs[selectedDate]
@@ -616,7 +621,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
                       {f.name}
                     </div>
                     <div style={{ fontFamily: FONT.mono, fontSize: 8.5, color: T.mute, letterSpacing: '0.04em', marginTop: 1 }}>
-                      {f.grams}G · {f.kcal} KCAL · {f.protein}G PROT
+                      {f.grams}G · {f.kcal} KCAL · {f.protein}G PROT{f.fiber ? ` · ${f.fiber}G FIBER` : ''}
                     </div>
                   </div>
                   <button type="button" onClick={() => handleRemoveFood(i)} style={{
@@ -631,7 +636,7 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr 1px 1fr', gap: 0, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, alignItems: 'start' }}>
             <MacroInput
               label="CALORIES"
               value={calories}
@@ -649,12 +654,23 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
               unit="g"
               placeholder="—"
             />
-            <div style={{ background: T.hair, alignSelf: 'stretch', margin: '4px 12px' }} />
+          </div>
+          <div style={{ height: 1, background: T.hair, margin: '16px 0' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, alignItems: 'start' }}>
             <MacroInput
               label="FAT"
               value={fat}
               onChange={setFat}
               goal={null}
+              unit="g"
+              placeholder="—"
+            />
+            <div style={{ background: T.hair, alignSelf: 'stretch', margin: '4px 12px' }} />
+            <MacroInput
+              label="FIBER"
+              value={fiber}
+              onChange={setFiber}
+              goal={fiberGoal ? `${fiberGoal}g` : null}
               unit="g"
               placeholder="—"
             />

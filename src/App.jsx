@@ -33,6 +33,7 @@ const defaultSettings = {
   startDate: null,
   goalType: 'lose',        // 'lose' | 'gain'
   proteinGoal: null,       // optional grams/day
+  fiberGoal: null,         // optional grams/day (GLP-1 constipation management)
   unitSystem: 'metric',    // 'metric' | 'us'
   medication: 'semaglutide',
   dose: 1.0,               // mg
@@ -74,7 +75,12 @@ export default function App() {
     if (!cloud) return
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthChecked(true) })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s)
+      // Ignore no-op session updates for the same user (e.g. a background token
+      // refresh) — returning the identical object skips the re-render, so the
+      // "load cloud data" effect below (keyed on `session`) won't re-fire and
+      // flash the loading splash. Only a real login/logout/user change should
+      // trigger a reload.
+      setSession(prev => (prev && s && prev.user.id === s.user.id) ? prev : s)
       if (!s) setCloudLoaded(false)
     })
     return () => sub.subscription.unsubscribe()

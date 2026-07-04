@@ -97,12 +97,13 @@ function PortionSheet({ food, onAdd, onBack }) {
         </div>
 
         {/* Computed macros */}
-        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {[
             { label: 'KCAL',    val: macros.kcal },
             { label: 'PROTEIN', val: `${macros.protein}g` },
             { label: 'FAT',     val: `${macros.fat}g` },
             { label: 'CARBS',   val: `${macros.carbs}g` },
+            { label: 'FIBER',   val: `${macros.fiber}g` },
           ].map(m => (
             <div key={m.label} style={{ background: T.surf2, borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
               <div style={{ fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.10em', marginBottom: 5 }}>{m.label}</div>

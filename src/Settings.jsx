@@ -236,6 +236,7 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
   const [goalWeight,    setGoalWeightLocal]  = useState(wFmt(s.goalWeight || 0, 0))
   const [pace,          setPaceLocal]        = useState(isMetric ? String(s.pace ?? '0.5') : String(((s.pace ?? 0.5) * 2.2046).toFixed(1)))
   const [proteinGoal,   setProteinLocal]     = useState(String(s.proteinGoal ?? ''))
+  const [fiberGoal,     setFiberLocal]       = useState(String(s.fiberGoal ?? ''))
   const [waterGoal,     setWaterLocal]       = useState(String(s.dailyWaterGoal ?? '8'))
 
   // Privacy
@@ -296,6 +297,10 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
     const v = parseFloat(proteinGoal)
     save({ proteinGoal: isNaN(v) ? null : v }); setOpenRow(null)
   }
+  function saveFiber() {
+    const v = parseFloat(fiberGoal)
+    save({ fiberGoal: isNaN(v) ? null : v }); setOpenRow(null)
+  }
   function saveWater() {
     const v = parseFloat(waterGoal)
     if (!isNaN(v)) { save({ dailyWaterGoal: v }); setOpenRow(null) }
@@ -354,6 +359,7 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
   const paceDisplay  = isMetric ? `${pace} kg / wk` : `${pace} lb / wk`
   const gwDisplay    = goalWeight ? `${goalWeight} ${wUnit}` : '—'
   const protDisplay  = proteinGoal ? `${proteinGoal} g` : '—'
+  const fiberDisplay = fiberGoal ? `${fiberGoal} g` : '—'
   const waterDisplay = waterGoal ? `${waterGoal} cups` : '—'
 
   return (
@@ -637,6 +643,20 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
                 onDone={saveProtein}
                 unit="g"
                 placeholder="120"
+              />
+            </EditableRow>
+
+            <EditableRow
+              label="Daily fiber" value={fiberDisplay}
+              isOpen={openRow === 'fiber'}
+              onTap={() => toggleRow('fiber')}
+            >
+              <InlineInput
+                value={fiberGoal}
+                onChange={setFiberLocal}
+                onDone={saveFiber}
+                unit="g"
+                placeholder="28"
               />
             </EditableRow>
 

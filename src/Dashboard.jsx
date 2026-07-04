@@ -249,14 +249,30 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
   const [protocolStep, setProtocolStep] = useState(() => {
     try { const s = localStorage.getItem('gt_protocol_step'); return s !== null ? parseInt(s, 10) : -1 } catch { return -1 }
   })
-  const [customSteps,  setCustomSteps]  = useState(() => {
-    try { return JSON.parse(localStorage.getItem('gt_protocol_custom') || '[]') } catch { return [] }
+  // Custom dose steps, keyed by medication id — lets someone on a named drug
+  // (e.g. Mounjaro) add an off-ladder dose like a 1mg microdose, while the
+  // "Custom" medication keeps its own from-scratch list under its own key.
+  const [customStepsByMed, setCustomStepsByMed] = useState(() => {
+    try {
+      const byMed = JSON.parse(localStorage.getItem('gt_protocol_custom_by_med') || 'null')
+      if (byMed) return byMed
+      // One-time migration from the old single-list format (was 'custom'-med only).
+      const legacy = JSON.parse(localStorage.getItem('gt_protocol_custom') || '[]')
+      return legacy.length ? { custom: legacy } : {}
+    } catch { return {} }
   })
-  const [customInput,  setCustomInput]  = useState('')
+  const [customInput,     setCustomInput]     = useState('')
+  const [addDoseOpen,     setAddDoseOpen]     = useState(false)
+
+  function saveCustomStepsByMed(next) {
+    setCustomStepsByMed(next)
+    try { localStorage.setItem('gt_protocol_custom_by_med', JSON.stringify(next)) } catch {}
+  }
 
   function changeMed(id) {
     setProtocolMed(id)
     setProtocolStep(-1)
+    setAddDoseOpen(false)
     try { localStorage.setItem('gt_protocol_med', id); localStorage.setItem('gt_protocol_step', '-1') } catch {}
   }
   function setStep(idx) {
@@ -266,23 +282,35 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
   }
   function addCustomStep() {
     const val = parseFloat(customInput)
-    if (isNaN(val) || val <= 0) return
+    if (isNaN(val) || val <= 0 || !protocolMed) return
     const label = String(parseFloat(val.toFixed(2))).replace(/\.?0+$/, '') || String(val)
-    const next  = [...customSteps, { label, wks: '' }]
+    const presetLabels = protocolMed === 'custom' ? [] : (MEDICATIONS.find(m => m.id === protocolMed)?.ladder ?? []).map(s => s.label)
+    const current = customStepsByMed[protocolMed] || []
+    const next = [...current, { label, wks: '' }]
       .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
-      .filter((s, i, arr) => arr.findIndex(x => x.label === s.label) === i)  // dedup
-    setCustomSteps(next); setProtocolStep(-1); setCustomInput('')
-    try { localStorage.setItem('gt_protocol_custom', JSON.stringify(next)); localStorage.setItem('gt_protocol_step', '-1') } catch {}
+      .filter((s, i, arr) => arr.findIndex(x => x.label === s.label) === i)  // dedup within custom
+      .filter(s => !presetLabels.includes(s.label))                          // don't duplicate a preset step
+    saveCustomStepsByMed({ ...customStepsByMed, [protocolMed]: next })
+    setProtocolStep(-1); setCustomInput(''); setAddDoseOpen(false)
+    try { localStorage.setItem('gt_protocol_step', '-1') } catch {}
   }
   function removeCustomStep(idx) {
-    const next = customSteps.filter((_, i) => i !== idx)
-    setCustomSteps(next); setProtocolStep(-1)
-    try { localStorage.setItem('gt_protocol_custom', JSON.stringify(next)); localStorage.setItem('gt_protocol_step', '-1') } catch {}
+    const current = customStepsByMed[protocolMed] || []
+    const next = current.filter((_, i) => i !== idx)
+    saveCustomStepsByMed({ ...customStepsByMed, [protocolMed]: next })
+    setProtocolStep(-1)
+    try { localStorage.setItem('gt_protocol_step', '-1') } catch {}
   }
 
-  // Active ladder = medication preset or user-built custom list
+  // Active ladder = medication preset merged with any custom doses added for
+  // it (e.g. a microdose below the standard starting step), or a from-scratch
+  // custom list when medication is "Custom".
   const activeMedObj  = MEDICATIONS.find(m => m.id === protocolMed)
-  const activeLadder  = protocolMed === 'custom' ? customSteps : (activeMedObj?.ladder ?? [])
+  const customSteps   = customStepsByMed[protocolMed] || []
+  const activeLadder  = protocolMed === 'custom'
+    ? customSteps
+    : [...(activeMedObj?.ladder ?? []).map(s => ({ ...s, custom: false })), ...customSteps.map(s => ({ ...s, custom: true }))]
+        .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
 
   // Injection inline edit
   const [injOpen,     setInjOpen]     = useState(false)
@@ -1074,6 +1102,10 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
                             <span style={{ fontFamily: FONT.mono, fontSize: 6, color: T.faint }}>
                               wk{step.wks}
                             </span>
+                          ) : step.custom ? (
+                            <span style={{ fontFamily: FONT.mono, fontSize: 6, color: T.accentDark }}>
+                              own
+                            </span>
                           ) : null}
                         </div>
                       )
@@ -1103,6 +1135,89 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
                   </div>
                 )}
               </>
+            )}
+
+            {/* ── Custom / micro dose (named medications) ──────────────── */}
+            {protocolMed && protocolMed !== 'custom' && activeMedObj && (
+              <div style={{ marginTop: 16 }}>
+                {!addDoseOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setAddDoseOpen(true)}
+                    style={{
+                      background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      fontFamily: FONT.ui, fontSize: 12, fontWeight: 600,
+                      color: T.accentDark, letterSpacing: '-0.01em',
+                    }}
+                  >
+                    <span style={{ fontSize: 15, lineHeight: 1 }}>+</span>
+                    Add a custom dose (e.g. microdosing)
+                  </button>
+                ) : (
+                  <>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 7.5, color: T.mute, letterSpacing: '0.12em', marginBottom: 8 }}>
+                      CUSTOM DOSE (MG)
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.1"
+                        value={customInput}
+                        onChange={e => setCustomInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addCustomStep()}
+                        placeholder="e.g. 1"
+                        autoFocus
+                        style={{
+                          flex: 1, border: `1px solid ${T.hair}`, borderRadius: 10,
+                          padding: '9px 12px', fontFamily: FONT.ui, fontSize: 13,
+                          background: T.card, outline: 'none', color: T.text,
+                        }}
+                      />
+                      <button
+                        onClick={addCustomStep}
+                        style={{
+                          width: 44, height: 44, borderRadius: 10, border: 0,
+                          background: T.ink, color: T.inkText, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 20, flexShrink: 0,
+                        }}
+                      >+</button>
+                      <button
+                        onClick={() => { setAddDoseOpen(false); setCustomInput('') }}
+                        style={{
+                          width: 44, height: 44, borderRadius: 10, border: `1px solid ${T.hair}`,
+                          background: 'transparent', color: T.mute, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, flexShrink: 0,
+                        }}
+                      >×</button>
+                    </div>
+                  </>
+                )}
+                {customSteps.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                    {customSteps.map((s, i) => (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '4px 10px 4px 12px', borderRadius: 20,
+                        background: T.surf2, border: `1px solid ${T.hair}`,
+                      }}>
+                        <span style={{ fontFamily: FONT.mono, fontSize: 11, color: T.text }}>{s.label} mg</span>
+                        <button
+                          onClick={() => removeCustomStep(i)}
+                          style={{
+                            background: 'transparent', border: 0, padding: 0,
+                            cursor: 'pointer', color: T.mute, fontSize: 14, lineHeight: 1,
+                            display: 'flex', alignItems: 'center',
+                          }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ── Recent injections ── */}

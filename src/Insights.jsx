@@ -169,6 +169,128 @@ function computeInsights(logs) {
   }
 }
 
+// ── Nutrition ↔ weight/side-effect correlations ────────────────────────────────
+// Pearson correlation coefficient between two equal-length numeric series.
+function pearson(xs, ys) {
+  const n = xs.length
+  if (n < 3) return null
+  const mean = a => a.reduce((s, v) => s + v, 0) / a.length
+  const mx = mean(xs), my = mean(ys)
+  let num = 0, dx2 = 0, dy2 = 0
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - mx, dy = ys[i] - my
+    num += dx * dy; dx2 += dx * dx; dy2 += dy * dy
+  }
+  const den = Math.sqrt(dx2 * dy2)
+  return den === 0 ? null : num / den
+}
+
+function strengthLabel(r) {
+  const a = Math.abs(r)
+  return a >= 0.6 ? 'Strong' : a >= 0.35 ? 'Moderate' : 'Weak'
+}
+
+function pairedSeries(weeks, xKey, yKey) {
+  const xs = [], ys = []
+  weeks.forEach(w => {
+    if (w[xKey] == null || w[yKey] == null) return
+    xs.push(w[xKey]); ys.push(w[yKey])
+  })
+  return { xs, ys }
+}
+
+const CORR_METRICS = {
+  avgProtein:  'protein',
+  avgFiber:    'fiber',
+  avgWater:    'water intake',
+  avgCalories: 'calorie intake',
+}
+
+// Buckets logs into Monday-keyed weeks and looks for correlations between
+// weekly nutrition averages and (a) weekly weight change, (b) logged
+// side-effect days — plus a dedicated fiber-vs-constipation check, since fiber
+// intake directly affects GLP-1 constipation.
+function computeCorrelations(logs) {
+  const weekMap = {}
+  Object.entries(logs).forEach(([dateStr, entry]) => {
+    const d   = new Date(dateStr + 'T12:00:00')
+    const day = d.getDay()
+    const mon = new Date(d)
+    mon.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
+    const key = mon.toISOString().split('T')[0]
+    if (!weekMap[key]) weekMap[key] = []
+    weekMap[key].push({ dateStr, ...entry })
+  })
+
+  const weeks = Object.entries(weekMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekKey, entries]) => {
+      const avg = key => {
+        const rows = entries.filter(e => e[key] != null && e[key] !== '')
+        return rows.length ? rows.reduce((s, e) => s + parseFloat(e[key]), 0) / rows.length : null
+      }
+      const weightRows = entries.filter(e => e.weight).sort((a, b) => a.dateStr.localeCompare(b.dateStr))
+      const weightChange = weightRows.length >= 2
+        ? parseFloat(weightRows[weightRows.length - 1].weight) - parseFloat(weightRows[0].weight)
+        : null
+      const hasEffect = e => Array.isArray(e.sideEffects) && e.sideEffects.length > 0 && !(e.sideEffects.length === 1 && e.sideEffects[0] === 'none')
+      return {
+        weekKey,
+        avgProtein:      avg('protein'),
+        avgFiber:        avg('fiber'),
+        avgWater:        avg('water'),
+        avgCalories:     avg('calories'),
+        weightChange,
+        sideEffectDays:  entries.filter(hasEffect).length,
+        constipationDays: entries.filter(e => Array.isArray(e.sideEffects) && e.sideEffects.includes('constipation')).length,
+      }
+    })
+
+  const MIN_WEEKS = 4, MIN_R = 0.35
+  const findings = []
+
+  Object.keys(CORR_METRICS).forEach(metric => {
+    const label = CORR_METRICS[metric]
+
+    const w = pairedSeries(weeks, metric, 'weightChange')
+    const rw = pearson(w.xs, w.ys)
+    if (rw != null && Math.abs(rw) >= MIN_R && w.xs.length >= MIN_WEEKS) {
+      findings.push({
+        id: `${metric}-weight`, r: rw, n: w.xs.length,
+        text: rw < 0
+          ? `Weeks with more ${label} tend to align with greater weight loss.`
+          : `Weeks with more ${label} tend to align with less weight loss.`,
+      })
+    }
+
+    const s = pairedSeries(weeks, metric, 'sideEffectDays')
+    const rs = pearson(s.xs, s.ys)
+    if (rs != null && Math.abs(rs) >= MIN_R && s.xs.length >= MIN_WEEKS) {
+      findings.push({
+        id: `${metric}-se`, r: rs, n: s.xs.length,
+        text: rs > 0
+          ? `Weeks with more ${label} tend to have more logged side effects.`
+          : `Weeks with more ${label} tend to have fewer logged side effects.`,
+      })
+    }
+  })
+
+  // Fiber vs constipation — the specific GLP-1 pattern worth calling out directly.
+  const fc = pairedSeries(weeks, 'avgFiber', 'constipationDays')
+  const rfc = pearson(fc.xs, fc.ys)
+  if (rfc != null && Math.abs(rfc) >= 0.3 && fc.xs.length >= MIN_WEEKS) {
+    findings.push({
+      id: 'fiber-constipation', r: rfc, n: fc.xs.length, highlight: true,
+      text: rfc < 0
+        ? 'Higher-fiber weeks tend to have fewer constipation logs.'
+        : 'Constipation logs are still showing up even in higher-fiber weeks — worth mentioning at your next check-in.',
+    })
+  }
+
+  findings.sort((a, b) => Math.abs(b.r) - Math.abs(a.r))
+  return { findings: findings.slice(0, 4), weeksAnalyzed: weeks.length }
+}
+
 // ── Date range formatter ──────────────────────────────────────────────────────
 function fmtRange(start, end) {
   const sm = start.getMonth(), em = end.getMonth()
@@ -232,6 +354,8 @@ export default function Insights({ logs = {}, userSettings = {}, onNavigate, ent
     weeks, totalWeeks, avgLoggedDays, overallAvgProt,
     bestWkLoss, heroLogMin, heroAvgProt, heroDose, hasData,
   } = computeInsights(logs)
+
+  const { findings: correlationFindings } = computeCorrelations(logs)
 
   // Days logged (for unlock progress)
   const totalLogDays = Object.values(logs).filter(e =>
@@ -377,6 +501,48 @@ export default function Insights({ logs = {}, userSettings = {}, onNavigate, ent
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
             </span>
           </button>
+        </div>
+
+        {/* ── Correlations ──────────────────────────────────── */}
+        <div style={{ padding: '22px 22px 10px' }}>
+          <Eyebrow>Correlations</Eyebrow>
+        </div>
+        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {correlationFindings.length > 0 ? (
+            <>
+              {correlationFindings.map(f => (
+                <Card key={f.id} padding={16} radius={14}
+                  style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: f.highlight ? T.accentSoft : T.surf2,
+                    color: f.highlight ? T.accentDark : T.mute,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: FONT.mono, fontSize: 10, fontWeight: 700,
+                  }}>
+                    {Math.round(Math.abs(f.r) * 100)}%
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONT.ui, fontSize: 13.5, color: T.text, lineHeight: 1.5, letterSpacing: '-0.01em' }}>
+                      {f.text}
+                    </div>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 8.5, color: T.faint, letterSpacing: '0.06em', marginTop: 5 }}>
+                      {strengthLabel(f.r).toUpperCase()} CORRELATION · {f.n} WEEKS
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              <div style={{ fontFamily: FONT.ui, fontSize: 11, color: T.faint, lineHeight: 1.5, padding: '4px 4px 0' }}>
+                Correlations reflect patterns in your own logged data, not medical causation.
+              </div>
+            </>
+          ) : (
+            <Card padding={18} radius={14} style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: FONT.ui, fontSize: 13, color: T.mute, lineHeight: 1.5 }}>
+                Log a few more weeks of nutrition, weight, and side effects to see how they relate to each other — including fiber vs. constipation.
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* ── What to know tip cards ─────────────────────────── */}

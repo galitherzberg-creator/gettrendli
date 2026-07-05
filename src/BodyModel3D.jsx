@@ -110,10 +110,25 @@ const TYPE = {
   },
 }
 
-// ── Smooth 1-D Catmull-Rom (organic interpolation of profile radii) ──
-function cr(p0, p1, p2, p3, t) {
+// ── Monotone-safe cubic Hermite (Fritsch–Carlson tangent limiting) ──
+// Plain Catmull-Rom can overshoot well beyond neighbouring control values when
+// two adjacent landmarks differ a lot (e.g. underbust → a much larger waist
+// from an atypical or extreme measurement) — that overshoot is exactly what
+// reads as a sharp, asymmetric "beak" spike in the mesh. This variant clamps
+// each tangent so the curve never exceeds the local min/max of its neighbours,
+// eliminating that spike while staying just as smooth for normal data.
+function tangent(a, b) {
+  if (a * b <= 0) return 0   // local extremum — flatten to avoid any overshoot
+  const m = (a + b) / 2
+  const cap = 3 * Math.min(Math.abs(a), Math.abs(b))
+  return Math.sign(m) * Math.min(Math.abs(m), cap)
+}
+function hermite(v0, v1, v2, v3, t) {
+  const m1 = tangent(v1 - v0, v2 - v1)
+  const m2 = tangent(v2 - v1, v3 - v2)
   const t2 = t * t, t3 = t2 * t
-  return 0.5 * ((2*p1) + (-p0+p2)*t + (2*p0-5*p1+4*p2-p3)*t2 + (-p0+3*p1-3*p2+p3)*t3)
+  const h00 = 2*t3 - 3*t2 + 1, h10 = t3 - 2*t2 + t, h01 = -2*t3 + 3*t2, h11 = t3 - t2
+  return h00*v1 + h10*m1 + h01*v2 + h11*m2
 }
 const KEYS = ['y', 'a', 'bf', 'bb', 'cx', 'cz']
 function sampleProfile(lm, perSeg = 10) {
@@ -124,7 +139,7 @@ function sampleProfile(lm, perSeg = 10) {
     for (let s = 0; s < perSeg; s++) {
       const t = s / perSeg
       const sec = {}
-      for (const k of KEYS) sec[k] = cr(get(i-1,k), get(i,k), get(i+1,k), get(i+2,k), t)
+      for (const k of KEYS) sec[k] = hermite(get(i-1,k), get(i,k), get(i+1,k), get(i+2,k), t)
       out.push(sec)
     }
   }
@@ -213,9 +228,19 @@ function Body({ sex = 'female', bodyType = 'hourglass', measurements = {}, cup, 
     const cf = cupScale(cup)
 
     const ms = v => (v ? parseFloat(v) : null)
-    const wScale = ms(measurements.waist) ? ms(measurements.waist) / 80 : 1
-    const hScale = ms(measurements.hips)  ? ms(measurements.hips)  / 95 : 1
-    const cScale = ms(measurements.chest) ? ms(measurements.chest) / 90 : 1
+    // Soft-clamp how far a measurement can push its scale factor from 1.0.
+    // Normal variation stays fully linear/accurate; only truly extreme inputs
+    // (e.g. a waist measurement far outside the reference range) get capped,
+    // so the model degrades gracefully instead of ballooning the torso wider
+    // than it is tall.
+    const softScale = (raw, ref, maxDelta = 0.42) => {
+      if (!raw) return 1
+      const delta = raw / ref - 1
+      return 1 + Math.max(-maxDelta, Math.min(maxDelta, delta))
+    }
+    const wScale = softScale(ms(measurements.waist), 80)
+    const hScale = softScale(ms(measurements.hips),  95)
+    const cScale = softScale(ms(measurements.chest), 90)
 
     // Weight projection: girth scales the torso, with the waist responding most
     // (where GLP-1 loss shows) and shoulders least.

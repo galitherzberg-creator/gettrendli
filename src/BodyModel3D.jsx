@@ -227,17 +227,24 @@ function Body({ sex = 'female', bodyType = 'hourglass', measurements = {}, cup, 
     const breast = isF ? (cf - 0.6) * 0.05 : 0   // extra front depth at the bust
 
     // ── TORSO (neck → seat), with front/back asymmetry ──
+    // The back (bb) from shoulders through hips is derived from shoulder width
+    // (sh) — a skeletal reference that barely moves with weight — so it reads
+    // as a stable, near-flat plane. The front (bf) is where waist/hip/chest
+    // measurements and weight projection actually show: the stomach rounds out
+    // while the back stays flat, matching real-world weight distribution.
+    // The buttock (seat) is the one exception — a real, naturally rounded
+    // feature, so it keeps its own hip-based depth on both sides.
     const torsoLM = [
       { y:0.72, a:0.052, bf:0.052, bb:0.052 },                       // throat
       { y:0.66, a:0.072, bf:0.070, bb:0.066 },                       // neck base
-      { y:0.605, a:sh,    bf:sh*0.52, bb:sh*0.50 },                  // shoulders (wide, shallow)
-      { y:0.55, a:sh*0.86, bf:ch*0.60, bb:ch*0.52 },                 // upper chest
-      { y:0.48, a:ch,      bf:ch*0.64 + breast, bb:ch*0.50, cz: breast*0.4 }, // bust
-      { y:0.41, a:ch*0.90, bf:ch*0.50, bb:ch*0.50 },                 // underbust
-      { y:0.32, a:wa,      bf:wa*0.74, bb:wa*0.66 },                 // waist
-      { y:0.24, a:(wa+hip)/2, bf:(wa+hip)/2*0.7, bb:(wa+hip)/2*0.6 }, // belly
-      { y:0.15, a:hip,     bf:hip*0.62, bb:hip*0.60 },               // hips
-      { y:0.06, a:hip*0.96, bf:hip*0.52, bb:hip*0.72 },             // seat (buttock back)
+      { y:0.605, a:sh,    bf:sh*0.52, bb:sh*0.50 },                  // shoulders (skeletal, flat)
+      { y:0.55, a:sh*0.86, bf:ch*0.60, bb:sh*0.46 },                 // upper chest — flat back
+      { y:0.48, a:ch,      bf:ch*0.64 + breast, bb:sh*0.42, cz: breast*0.4 }, // bust — flat back
+      { y:0.41, a:ch*0.90, bf:ch*0.50, bb:sh*0.40 },                 // underbust — flat back
+      { y:0.32, a:wa,      bf:wa*0.88, bb:sh*0.38 },                 // waist — stomach rounds, back flat
+      { y:0.24, a:(wa+hip)/2, bf:(wa+hip)/2*0.86, bb:sh*0.36 },      // belly (stomach) — main round-with-measurements zone
+      { y:0.15, a:hip,     bf:hip*0.62, bb:sh*0.40 },                // hips — front follows measurement, back flat
+      { y:0.06, a:hip*0.96, bf:hip*0.52, bb:hip*0.72 },             // seat (buttock) — naturally rounded, unchanged
       { y:-0.01, a:hip*0.74, bf:hip*0.5, bb:hip*0.55 },             // crotch
     ]
     const torso = buildTube(sampleProfile(torsoLM, 9), 30, isF ? 2.15 : 2.3)

@@ -182,13 +182,11 @@ function ChipSelect({ options, value, onChange }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-// Only this account sees the Admin entry in Settings.
-const ADMIN_EMAIL = 'galit.herzberg@gmail.com'
-
-export default function Settings({ userSettings, onSaveSettings, logs = {}, onNavigate, entitlements, onUpgrade, onSignOut }) {
+export default function Settings({ userSettings, onSaveSettings, logs = {}, onNavigate, entitlements, onUpgrade, onSignOut, isAdmin = false }) {
   const s = userSettings
-
-  const isAdmin = (s.email ?? '').trim().toLowerCase() === ADMIN_EMAIL
+  // `isAdmin` is passed down from App.jsx, computed from the real authenticated
+  // session email — never from this settings JSON, which the account owner can
+  // freely edit and must not be trusted for a privilege check.
 
   // Unit helpers
   const isMetric = s.unitSystem !== 'us'
@@ -248,9 +246,6 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
 
   // Toast
   const [toast, setToast] = useState(null)
-
-  // Easter egg: 3-tap footer → admin
-  const [footerTaps, setFooterTaps] = useState(0)
 
   function showToast(msg) {
     setToast(msg)
@@ -684,6 +679,43 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
             <ChevronRow      label="Export data"           value="JSON" onTap={handleExportData} />
           </ListCard>
 
+          {/* ── ADMIN (only ever visible to the admin account) ──── */}
+          {isAdmin && (
+            <div style={{ padding: '22px 20px 0' }}>
+              <button
+                type="button"
+                onClick={() => onNavigate('admin')}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
+                  background: T.ink, border: 0, textAlign: 'left',
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  background: 'rgba(63,202,165,0.18)', color: T.accent,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/>
+                    <path d="M9 12l2 2 4-4" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 15, fontWeight: 600, color: T.inkText, letterSpacing: '-0.01em' }}>
+                    Admin
+                  </div>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 12, color: 'rgba(250,250,247,0.55)', marginTop: 1 }}>
+                    Operations console — only visible to you
+                  </div>
+                </div>
+                <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
+                  <path d="M1 1l5 5-5 5" stroke="rgba(250,250,247,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* ── ACCOUNT ────────────────────────────────────────── */}
           <Eyebrow style={{ padding: '22px 20px 8px', letterSpacing: '0.14em' }}>Account</Eyebrow>
           <ListCard>
@@ -696,7 +728,6 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
               }
               onTap={entitlements?.subscribed ? () => showToast('GetTrendli Plus is active') : onUpgrade} />
             <ChevronRow       label="Send feedback" value=""             onTap={() => showToast('Thanks for using GetTrendli!')} />
-            {isAdmin && <ChevronRow label="Admin" value="Operations" onTap={() => onNavigate('admin')} />}
             <ChevronRow       label="Reset all logs" isRed onTap={handleResetData} />
             <ChevronRow       label="Sign out"       isRed onTap={handleSignOut} />
             <ChevronRow       label="Delete account" isRed onTap={handleDeleteAccount} />
@@ -704,14 +735,7 @@ export default function Settings({ userSettings, onSaveSettings, logs = {}, onNa
 
           {/* ── Footer ─────────────────────────────────────────── */}
           <div style={{ textAlign: 'center', padding: '28px 0 12px' }}>
-            <div
-              style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, color: T.mute, letterSpacing: '-0.01em', userSelect: 'none', cursor: 'default' }}
-              onClick={() => {
-                const n = footerTaps + 1
-                setFooterTaps(n)
-                if (n >= 3) { setFooterTaps(0); onNavigate('admin') }
-              }}
-            >
+            <div style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 20, color: T.mute, letterSpacing: '-0.01em', userSelect: 'none' }}>
               GetTrendli
             </div>
             <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.12em', marginTop: 4 }}>

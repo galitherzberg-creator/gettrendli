@@ -13,6 +13,11 @@ import { loadCloud, saveCloud } from './cloudStore'
 
 const Charts = lazy(() => import('./Charts'))
 
+// Only this account may open the Admin console — checked again here (not just
+// in the Settings menu) so navigating to 'admin' by any other path can never
+// render it for anyone else.
+const ADMIN_EMAIL = 'galit.herzberg@gmail.com'
+
 function load(key, fallback) {
   try {
     const val = localStorage.getItem(key)
@@ -185,13 +190,23 @@ export default function App() {
 
   const gate = { entitlements, onUpgrade: handleUpgrade }
 
+  // Trust the real authenticated session email (not the user-editable
+  // settings.email JSON field) to decide admin access — settings are just
+  // data the account owner can write, so they must never be the source of
+  // truth for a privilege check.
+  const trustedEmail = cloud ? (session?.user?.email ?? '') : (userSettings?.email ?? '')
+  const isAdminUser = trustedEmail.trim().toLowerCase() === ADMIN_EMAIL
+
   const screenEl = (() => {
     if (screen === 'log')          return <LogToday logs={logs} updateLog={updateLog} userSettings={userSettings} onNavigate={handleNav} {...gate} />
     if (screen === 'insights')     return <Insights logs={logs} userSettings={userSettings} onNavigate={handleNav} {...gate} />
     if (screen === 'charts')       return <Suspense fallback={null}><Charts onNavigate={handleNav} logs={logs} userSettings={userSettings} {...gate} /></Suspense>
-    if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} logs={logs} onNavigate={handleNav} onSignOut={handleSignOut} {...gate} />
+    if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} logs={logs} onNavigate={handleNav} onSignOut={handleSignOut} isAdmin={isAdminUser} {...gate} />
     if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} userSettings={userSettings} logs={logs} onNavigate={handleNav} {...gate} />
-    if (screen === 'admin')        return <Admin onNavigate={handleNav} />
+    if (screen === 'admin') {
+      if (!isAdminUser) return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} updateLog={updateLog} {...gate} />
+      return <Admin onNavigate={handleNav} adminName={userSettings?.name} adminEmail={trustedEmail} />
+    }
     return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} updateLog={updateLog} {...gate} />
   })()
 

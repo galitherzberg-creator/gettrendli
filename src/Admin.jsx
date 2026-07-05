@@ -1,61 +1,78 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { T, FONT, Eyebrow } from './tokens'
+import { adminListProfiles } from './cloudStore'
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+const PLUS_PRICE = 9.99
 
-const STATS = {
-  active:    { value: '12,408', delta: '+184',  label: 'ACTIVE'    },
-  new7d:     { value: '326',    delta: '+9%',   label: 'NEW 7D'    },
-  retention: { value: '78',     delta: null,    label: 'RETENTION', unit: '%' },
+function fmtDate(iso) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-const QUEUE_ITEMS = [
-  { id: 'T-2418', cat: 'SIDE EFFECT', priority: 'HIGH', title: 'Nausea increased after titration to 1.7 mg',          user: 'Rachel Park',    time: '12M AGO' },
-  { id: 'T-2417', cat: 'BILLING',     priority: 'MID',  title: 'Annual plan downgrade — wants refund difference',      user: 'Mateo Rivera',   time: '47M AGO' },
-  { id: 'T-2416', cat: 'ACCOUNT',     priority: 'MID',  title: 'Lost access to 2FA, would like to export data',        user: 'Hannah Yu',      time: '1H AGO'  },
-  { id: 'T-2412', cat: 'BUG',         priority: 'LOW',  title: 'Streak reset after timezone change',                   user: 'Will Andersson', time: '3H AGO'  },
-  { id: 'T-2411', cat: 'SIDE EFFECT', priority: 'HIGH', title: 'Vomiting episode 6h after dose escalation',            user: 'Priya Mehta',    time: '5H AGO'  },
-  { id: 'T-2410', cat: 'ACCOUNT',     priority: 'LOW',  title: "Can't change injection day from app settings",         user: 'Sam Torres',     time: '7H AGO'  },
-  { id: 'T-2409', cat: 'BILLING',     priority: 'MID',  title: 'Double-charged for December subscription',             user: 'Nina Kowalski',  time: '1D AGO'  },
-  { id: 'T-2408', cat: 'FEATURE',     priority: 'LOW',  title: 'Request: add BMI tracking to measurements',            user: 'James Liu',      time: '1D AGO'  },
-  { id: 'T-2407', cat: 'SIDE EFFECT', priority: 'MID',  title: 'Persistent heartburn started week 3 of semaglutide',   user: 'Carla Ferreira', time: '2D AGO'  },
-  { id: 'T-2406', cat: 'BILLING',     priority: 'LOW',  title: 'Receipt not delivered after annual renewal',            user: 'Omar Patel',     time: '2D AGO'  },
-  { id: 'T-2405', cat: 'BUG',         priority: 'MID',  title: 'Weight chart shows wrong unit after switching to LB',  user: 'Yuki Tanaka',    time: '3D AGO'  },
-  { id: 'T-2404', cat: 'ACCOUNT',     priority: 'LOW',  title: 'Wants to merge two separate accounts',                  user: 'Marcus Webb',    time: '4D AGO'  },
-  { id: 'T-2403', cat: 'FEATURE',     priority: 'LOW',  title: 'Add Apple Health sync for steps data',                  user: 'Sofia Andersen', time: '5D AGO'  },
-  { id: 'T-2402', cat: 'SIDE EFFECT', priority: 'HIGH', title: 'Severe dizziness — pausing medication',                 user: 'Tyler Brooks',   time: '6D AGO'  },
-]
+// Turn the raw rows from adminListProfiles() into the shape the console
+// renders, computing everything (trend, activity, safety flags) from each
+// user's own real settings/logs — no fabricated data.
+function deriveUsers(rows) {
+  const now = Date.now()
+  return rows.map(row => {
+    const s = row.settings || {}
+    const logsObj = row.logs || {}
+    const weightEntries = Object.entries(logsObj)
+      .filter(([, e]) => e && e.weight)
+      .sort(([a], [b]) => a.localeCompare(b))
+    const startWeight  = weightEntries.length ? parseFloat(weightEntries[0][1].weight) : null
+    const latestWeight = weightEntries.length ? parseFloat(weightEntries[weightEntries.length - 1][1].weight) : null
+    const trendKg = (startWeight != null && latestWeight != null && weightEntries.length >= 2)
+      ? +(latestWeight - startWeight).toFixed(1) : null
 
-const USER_ITEMS = [
-  { id: 'U-1042', name: 'Elena Marchetti', plan: 'Plus', days: 87,  drug: 'Semaglutide', trend: '−12.4 kg', status: 'active',   lastActive: '2H AGO'   },
-  { id: 'U-1041', name: 'Marcus Webb',     plan: 'Plus', days: 124, drug: 'Tirzepatide', trend: '−18.2 kg', status: 'active',   lastActive: '4H AGO'   },
-  { id: 'U-1040', name: 'Sofia Andersen',  plan: 'Free', days: 31,  drug: 'Semaglutide', trend: '−3.1 kg',  status: 'inactive', lastActive: '1D AGO'   },
-  { id: 'U-1039', name: 'Tyler Brooks',    plan: 'Plus', days: 210, drug: 'Tirzepatide', trend: '−24.0 kg', status: 'active',   lastActive: '3H AGO'   },
-  { id: 'U-1038', name: 'Yuki Tanaka',     plan: 'Free', days: 14,  drug: 'Liraglutide', trend: '−1.2 kg',  status: 'active',   lastActive: '6H AGO'   },
-  { id: 'U-1037', name: 'Priya Mehta',     plan: 'Plus', days: 63,  drug: 'Semaglutide', trend: '−8.8 kg',  status: 'active',   lastActive: 'NOW'      },
-  { id: 'U-1036', name: 'James Liu',       plan: 'Free', days: 7,   drug: 'None',         trend: '—',        status: 'new',      lastActive: '12H AGO'  },
-  { id: 'U-1035', name: 'Carla Ferreira',  plan: 'Plus', days: 45,  drug: 'Semaglutide', trend: '−5.4 kg',  status: 'active',   lastActive: '1D AGO'   },
-]
+    const allDates = Object.keys(logsObj).sort()
+    const lastLogDate = allDates.length ? allDates[allDates.length - 1] : null
+    const daysSinceLastLog = lastLogDate
+      ? Math.floor((now - new Date(lastLogDate + 'T12:00:00').getTime()) / 86400000) : null
 
-const FLAG_ITEMS = [
-  { id: 'F-031', type: 'RAPID LOSS',    title: 'Weight drop > 3 kg in 7 days',              user: 'Marcus Webb',    time: '1H AGO',  severity: 'HIGH' },
-  { id: 'F-030', type: 'NO LOGS',       title: 'Zero logs for 21+ days',                    user: 'Sofia Andersen', time: '2D AGO',  severity: 'MID'  },
-  { id: 'F-029', type: 'DOSE GAP',      title: 'Missed 2 consecutive injections',            user: 'James Liu',      time: '3D AGO',  severity: 'MID'  },
-]
+    const createdAt = s.createdAt ? new Date(s.createdAt) : null
+    const daysOn = createdAt ? Math.max(0, Math.floor((now - createdAt.getTime()) / 86400000)) : 0
 
-const ADMIN = { name: 'Sarah Reyes', role: 'Clinical Admin', initials: 'SR' }
+    // Rapid weight loss: the two most recent weigh-ins, within 7 days of each
+    // other, show a 3kg+ drop.
+    let rapidLoss = false
+    if (weightEntries.length >= 2) {
+      const [d1, e1] = weightEntries[weightEntries.length - 2]
+      const [d2, e2] = weightEntries[weightEntries.length - 1]
+      const days = (new Date(d2) - new Date(d1)) / 86400000
+      const drop = parseFloat(e1.weight) - parseFloat(e2.weight)
+      if (days > 0 && days <= 7 && drop >= 3) rapidLoss = true
+    }
+    const noLogsFlag = allDates.length > 0 && daysSinceLastLog != null && daysSinceLastLog >= 14
 
-// Subscription / revenue metrics (GetTrendli Plus = $9.99/mo).
-const SUB = {
-  mrr:        '$48,210',
-  mrrDelta:   '+6.2%',
-  plusUsers:  4842,
-  freeUsers:  7566,
-  trialsActive: 1284,
-  trialConv:  '41%',
-  churn:      '3.1%',
-  arpu:       '$3.89',
+    const status = allDates.length === 0
+      ? 'new'
+      : (daysSinceLastLog != null && daysSinceLastLog <= 2 ? 'active' : 'inactive')
+
+    return {
+      id: row.user_id,
+      name: s.name || 'Unnamed',
+      email: s.email || '—',
+      plan: s.subscriptionActive ? 'Plus' : 'Free',
+      days: daysOn,
+      drug: s.medication ? s.medication[0].toUpperCase() + s.medication.slice(1) : 'None',
+      startWeight, latestWeight,
+      trend: trendKg != null ? `${trendKg > 0 ? '+' : ''}${trendKg} kg` : '—',
+      status,
+      hasLogs: allDates.length > 0,
+      logCount: allDates.length,
+      lastActive: lastLogDate ? fmtDate(lastLogDate) : 'Never logged',
+      daysSinceLastLog,
+      rapidLoss,
+      noLogsFlag,
+      adherencePct: daysOn > 0 ? Math.min(100, Math.round((allDates.length / daysOn) * 100)) : 0,
+    }
+  }).sort((a, b) => a.days - b.days)
 }
+
+const ADMIN_EMAIL = 'galit.herzberg@gmail.com'
+const ADMIN_SETUP_SQL = `create policy "admin can view all profiles"
+on public.profiles for select
+using ( (auth.jwt() ->> 'email') = '${ADMIN_EMAIL}' );`
 
 // ── Priority badge ─────────────────────────────────────────────────────────────
 function PriorityBadge({ level }) {
@@ -220,15 +237,15 @@ function UserItem({ item, first, onOpen }) {
           </span>
           <PlanBadge plan={item.plan} />
         </div>
-        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.06em' }}>
-          {item.id} · {item.drug} · DAY {String(item.days).padStart(3, '0')}
+        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {item.email} · {item.drug} · DAY {String(item.days).padStart(3, '0')}
         </div>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontFamily: FONT.ui, fontSize: 13, fontWeight: 600, color: T.accentDark, letterSpacing: '-0.01em' }}>
+        <div style={{ fontFamily: FONT.ui, fontSize: 13, fontWeight: 600, color: item.trend.startsWith('-') || item.trend.startsWith('−') ? T.accentDark : T.mute, letterSpacing: '-0.01em' }}>
           {item.trend}
         </div>
-        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.06em', marginTop: 2 }}>
+        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: item.noLogsFlag ? '#C62828' : T.faint, letterSpacing: '0.06em', marginTop: 2 }}>
           {item.lastActive}
         </div>
       </div>
@@ -339,13 +356,12 @@ function TicketDetail({ item, resolved, onToggle, onBack, notify }) {
 
 // ── User detail ───────────────────────────────────────────────────────────────
 function UserDetail({ item, onBack, notify }) {
-  const startW = item.trend !== '—' ? '92.0 kg' : '—'
   return (
     <div>
       <BackBar label="BACK TO USERS" onBack={onBack} />
       <div style={{ padding: '0 20px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ width: 48, height: 48, borderRadius: 24, background: T.ink, color: T.inkText, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT.ui, fontWeight: 700, fontSize: 16 }}>
-          {item.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+          {item.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -353,29 +369,31 @@ function UserDetail({ item, onBack, notify }) {
             <PlanBadge plan={item.plan} />
           </div>
           <div style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.06em', marginTop: 3 }}>
-            {item.id} · {item.status.toUpperCase()} · LAST ACTIVE {item.lastActive}
+            {item.email} · LAST ACTIVE {item.lastActive.toUpperCase()}
           </div>
         </div>
       </div>
 
       <MetaRow label="MEDICATION" value={item.drug} />
       <MetaRow label="DAYS ON PROGRAM" value={String(item.days).padStart(3, '0')} />
-      <MetaRow label="START WEIGHT" value={startW} />
-      <MetaRow label="TOTAL CHANGE" value={item.trend} accent />
-      <MetaRow label="LOG ADHERENCE" value={`${Math.min(99, 60 + (item.days % 40))}%`} />
+      <MetaRow label="START WEIGHT" value={item.startWeight != null ? `${item.startWeight} kg` : '—'} />
+      <MetaRow label="TOTAL CHANGE" value={item.trend} accent={item.trend !== '—'} />
+      <MetaRow label="LOG ADHERENCE" value={item.hasLogs ? `${item.adherencePct}%` : '—'} />
+      {item.rapidLoss && (
+        <MetaRow label="⚠ SAFETY FLAG" value="Rapid weight loss" />
+      )}
+      {item.noLogsFlag && (
+        <MetaRow label="⚠ SAFETY FLAG" value={`No logs for ${item.daysSinceLastLog}+ days`} />
+      )}
 
       <div style={{ padding: '18px 20px 0', display: 'flex', gap: 8 }}>
-        <ActionBtn label="Message" onClick={() => notify(`Message sent to ${item.name}`)} />
+        <ActionBtn label="Message" onClick={() => notify(`(Demo) Message sent to ${item.name}`)} />
         {item.plan !== 'Plus'
-          ? <ActionBtn dark label="Comp Plus" onClick={() => notify(`${item.name} upgraded to Plus (comp)`)} />
-          : <ActionBtn label="Manage plan" onClick={() => notify('Opened plan management')} />}
+          ? <ActionBtn dark label="Comp Plus" onClick={() => notify(`(Demo) ${item.name} would be upgraded to Plus`)} />
+          : <ActionBtn label="Manage plan" onClick={() => notify('(Demo) Plan management')} />}
       </div>
-      <div style={{ padding: '8px 20px 0' }}>
-        <button type="button" onClick={() => notify('Streak reset')} style={{
-          width: '100%', padding: '11px 8px', borderRadius: 10, cursor: 'pointer',
-          border: `1px solid ${T.hair}`, background: T.card, color: '#C62828',
-          fontFamily: FONT.ui, fontSize: 13, fontWeight: 600,
-        }}>Reset streak</button>
+      <div style={{ padding: '8px 20px 0', fontFamily: FONT.ui, fontSize: 10.5, color: T.faint, textAlign: 'center' }}>
+        Actions here are demo-only for now — no real message or billing change is sent.
       </div>
     </div>
   )
@@ -383,22 +401,38 @@ function UserDetail({ item, onBack, notify }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function Admin({ onNavigate }) {
-  const [activeTab,   setActiveTab]   = useState('queue')
+export default function Admin({ onNavigate, adminName, adminEmail }) {
+  const [activeTab,   setActiveTab]   = useState('users')
   const [searchQuery, setSearchQuery] = useState('')
   const [searching,   setSearching]   = useState(false)
-  const [resolvedIds, setResolvedIds] = useState({})   // { [ticketId]: true }
+  const [resolvedIds, setResolvedIds] = useState({})   // { [ticketId]: true } — queue tickets (none yet)
   const [priFilter,   setPriFilter]   = useState('ALL') // ALL | HIGH | MID | LOW
   const [detail,      setDetail]      = useState(null)  // { kind:'ticket'|'user', item }
   const [toast,       setToast]       = useState(null)
 
+  const [users,     setUsers]     = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setLoadError(null)
+    adminListProfiles()
+      .then(rows => { if (!cancelled) setUsers(deriveUsers(rows)) })
+      .catch(err => { if (!cancelled) setLoadError(err.message || 'Failed to load user data.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
   const toggleResolved = id => setResolvedIds(prev => ({ ...prev, [id]: !prev[id] }))
   const notify = msg => { setToast(msg); setTimeout(() => setToast(null), 2000) }
 
-  const openCount = QUEUE_ITEMS.filter(i => !resolvedIds[i.id]).length
-  const highCount = QUEUE_ITEMS.filter(i => i.priority === 'HIGH' && !resolvedIds[i.id]).length
-
-  const filteredQueue = QUEUE_ITEMS.filter(i => {
+  // No support-ticket system is built yet — the Queue tab is honestly empty
+  // rather than showing fabricated tickets.
+  const queueItems = []
+  const openCount = queueItems.filter(i => !resolvedIds[i.id]).length
+  const highCount = queueItems.filter(i => i.priority === 'HIGH' && !resolvedIds[i.id]).length
+  const filteredQueue = queueItems.filter(i => {
     if (priFilter !== 'ALL' && i.priority !== priFilter) return false
     if (!searchQuery) return true
     const q = searchQuery.toLowerCase()
@@ -406,11 +440,33 @@ export default function Admin({ onNavigate }) {
   })
 
   const filteredUsers = searchQuery
-    ? USER_ITEMS.filter(i =>
-        i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        i.id.toLowerCase().includes(searchQuery.toLowerCase())
+    ? users.filter(u =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : USER_ITEMS
+    : users
+
+  // Safety flags — derived from each user's own real logs (rapid weight loss,
+  // long gaps with no logging), not a separate fabricated list.
+  const flagItems = users.flatMap(u => {
+    const items = []
+    if (u.rapidLoss) items.push({ id: `${u.id}-rapid`, type: 'RAPID LOSS', title: 'Weight drop of 3kg+ within a 7-day window', user: u.name, time: u.lastActive, severity: 'HIGH' })
+    if (u.noLogsFlag) items.push({ id: `${u.id}-nolog`, type: 'NO LOGS', title: `No logs for ${u.daysSinceLastLog}+ days`, user: u.name, time: u.lastActive, severity: 'MID' })
+    return items
+  })
+
+  // Real subscription snapshot from each user's own stored entitlement flag.
+  const totalUsers  = users.length
+  const plusCount   = users.filter(u => u.plan === 'Plus').length
+  const freeCount   = totalUsers - plusCount
+  const new7d       = users.filter(u => u.days <= 7).length
+  const inactiveCount = users.filter(u => u.noLogsFlag).length
+  const withLogsCount = users.filter(u => u.hasLogs).length
+  const retentionPct  = totalUsers ? Math.round((withLogsCount / totalUsers) * 100) : 0
+  const trialActiveCount = users.filter(u => u.plan === 'Free' && u.days <= 90).length
+  const mrrVal  = plusCount * PLUS_PRICE
+  const arpuVal = totalUsers ? mrrVal / totalUsers : 0
+  const paidPct = totalUsers ? Math.round((plusCount / totalUsers) * 100) : 0
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: FONT.ui, display: 'flex', flexDirection: 'column' }}>
@@ -469,7 +525,7 @@ export default function Admin({ onNavigate }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: FONT.ui, fontWeight: 700, fontSize: 12, letterSpacing: '-0.01em',
               }}>
-                {ADMIN.initials}
+                {(adminName || adminEmail || '?').trim().slice(0, 2).toUpperCase()}
               </div>
             </div>
           </div>
@@ -478,7 +534,7 @@ export default function Admin({ onNavigate }) {
             <h1 style={{ fontFamily: FONT.ui, fontSize: 32, fontWeight: 700, letterSpacing: '-0.035em', margin: 0, color: T.text, lineHeight: 1 }}>
               Operations
             </h1>
-            {highCount > 0 && (
+            {flagItems.some(f => f.severity === 'HIGH') && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 fontFamily: FONT.mono, fontSize: 9, color: '#C62828', letterSpacing: '0.08em',
@@ -486,7 +542,7 @@ export default function Admin({ onNavigate }) {
                 border: '1px solid rgba(198,40,40,0.15)',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: 3, background: '#C62828', display: 'inline-block' }} />
-                {highCount} HIGH PRIORITY
+                {flagItems.filter(f => f.severity === 'HIGH').length} SAFETY FLAG{flagItems.filter(f => f.severity === 'HIGH').length !== 1 ? 'S' : ''}
               </div>
             )}
           </div>
@@ -516,16 +572,16 @@ export default function Admin({ onNavigate }) {
 
           {/* Stats row */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            {Object.values(STATS).map(s => (
-              <StatCard key={s.label} label={s.label} value={s.value} delta={s.delta} unit={s.unit} />
-            ))}
+            <StatCard label="TOTAL USERS" value={loading ? '—' : totalUsers} />
+            <StatCard label="NEW 7D"      value={loading ? '—' : new7d} />
+            <StatCard label="LOGGING"     value={loading ? '—' : retentionPct} unit="%" />
           </div>
 
           {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: `1px solid ${T.hair}` }}>
+            <TabChip id="users" label="Users"  count={loading ? null : totalUsers} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+            <TabChip id="flags" label="Flags"  count={loading ? null : flagItems.length}  active={activeTab === 'flags'} onClick={() => setActiveTab('flags')} />
             <TabChip id="queue" label="Queue"  count={openCount} active={activeTab === 'queue'} onClick={() => setActiveTab('queue')} />
-            <TabChip id="users" label="Users"  count={12408}              active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-            <TabChip id="flags" label="Flags"  count={FLAG_ITEMS.length}  active={activeTab === 'flags'} onClick={() => setActiveTab('flags')} />
             <TabChip id="revenue" label="Revenue" active={activeTab === 'revenue'} onClick={() => setActiveTab('revenue')} />
           </div>
         </div>
@@ -533,43 +589,53 @@ export default function Admin({ onNavigate }) {
         {/* ── Tab content ─────────────────────────────────────── */}
         <div style={{ flex: 1 }}>
 
+          {/* Loading / setup-needed states apply to any data-driven tab */}
+          {activeTab !== 'queue' && loading && (
+            <div style={{ padding: '50px 20px', textAlign: 'center', fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.10em' }}>
+              LOADING…
+            </div>
+          )}
+          {activeTab !== 'queue' && !loading && loadError && (
+            <div style={{ padding: '20px' }}>
+              <div style={{ background: T.surf2, borderRadius: 14, padding: '18px 16px', textAlign: 'left' }}>
+                <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 6 }}>
+                  Couldn't load user data
+                </div>
+                <div style={{ fontFamily: FONT.ui, fontSize: 12.5, color: T.mute, lineHeight: 1.5, marginBottom: 10 }}>
+                  This usually means the one-time admin database policy hasn't been added yet. Run this in your Supabase SQL Editor (with your own email in place of the placeholder):
+                </div>
+                <pre style={{
+                  background: T.ink, color: T.accent, padding: '10px 12px', borderRadius: 8,
+                  fontFamily: FONT.mono, fontSize: 10, lineHeight: 1.5, overflowX: 'auto', margin: 0,
+                }}>{ADMIN_SETUP_SQL}</pre>
+              </div>
+            </div>
+          )}
+
           {/* Queue */}
           {activeTab === 'queue' && (
             <div>
-              {/* Priority filter + open count */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 20px 10px', flexWrap: 'wrap' }}>
-                {['ALL', 'HIGH', 'MID', 'LOW'].map(p => (
-                  <FilterChip key={p} label={p} active={priFilter === p}
-                    count={p === 'ALL' ? openCount : QUEUE_ITEMS.filter(i => i.priority === p && !resolvedIds[i.id]).length}
-                    onClick={() => setPriFilter(p)} />
-                ))}
-                <span style={{ marginLeft: 'auto', fontFamily: FONT.mono, fontSize: 9, color: T.faint, letterSpacing: '0.08em' }}>
-                  {openCount} OPEN
-                </span>
-              </div>
-              {filteredQueue.map((item, i) => (
-                <QueueItem key={item.id} item={item} first={i === 0}
-                  resolved={!!resolvedIds[item.id]} onToggle={() => toggleResolved(item.id)}
-                  onOpen={() => setDetail({ kind: 'ticket', item })} />
-              ))}
-              {filteredQueue.length === 0 && (
-                <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: FONT.ui, fontSize: 14, color: T.mute }}>
-                  {searchQuery ? `No tickets matching "${searchQuery}"` : 'No tickets in this filter'}
+              <div style={{ padding: '48px 28px', textAlign: 'center' }}>
+                <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 6 }}>
+                  No support tickets yet
                 </div>
-              )}
+                <div style={{ fontFamily: FONT.ui, fontSize: 12.5, color: T.mute, lineHeight: 1.5 }}>
+                  This is where user-submitted feedback and support requests will appear once in-app reporting is added.
+                </div>
+              </div>
             </div>
           )}
 
           {/* Users */}
-          {activeTab === 'users' && (
+          {activeTab === 'users' && !loading && !loadError && (
             <div>
               {/* Summary row */}
               <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${T.hair}` }}>
                 {[
-                  { label: 'PLUS',     val: USER_ITEMS.filter(u => u.plan === 'Plus').length.toString() },
-                  { label: 'FREE',     val: USER_ITEMS.filter(u => u.plan === 'Free').length.toString() },
-                  { label: 'NEW 7D',   val: '47' },
-                  { label: 'CHURNED',  val: '12' },
+                  { label: 'PLUS',     val: plusCount },
+                  { label: 'FREE',     val: freeCount },
+                  { label: 'NEW 7D',   val: new7d },
+                  { label: 'INACTIVE', val: inactiveCount },
                 ].map((s, i) => (
                   <div key={s.label} style={{
                     flex: 1, padding: '12px 0', textAlign: 'center',
@@ -580,72 +646,88 @@ export default function Admin({ onNavigate }) {
                   </div>
                 ))}
               </div>
-              {(searchQuery ? filteredUsers : USER_ITEMS).map((item, i) => (
+              {filteredUsers.map((item, i) => (
                 <UserItem key={item.id} item={item} first={i === 0}
                   onOpen={() => setDetail({ kind: 'user', item })} />
               ))}
-              {searchQuery && filteredUsers.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <div style={{ padding: '40px 20px', textAlign: 'center', fontFamily: FONT.ui, fontSize: 14, color: T.mute }}>
-                  No users matching "{searchQuery}"
+                  {searchQuery ? `No users matching "${searchQuery}"` : 'No one has signed up yet — check back once your pilot testers create accounts.'}
                 </div>
               )}
             </div>
           )}
 
           {/* Flags */}
-          {activeTab === 'flags' && (
+          {activeTab === 'flags' && !loading && !loadError && (
             <div>
-              <div style={{ padding: '10px 20px 8px' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 14px', borderRadius: 10,
-                  background: 'rgba(198,40,40,0.06)', border: '1px solid rgba(198,40,40,0.12)',
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 2l6 12H2L8 2Z" stroke="#C62828" strokeWidth="1.4" strokeLinejoin="round"/>
-                    <path d="M8 7v3" stroke="#C62828" strokeWidth="1.5" strokeLinecap="round"/>
-                    <circle cx="8" cy="12" r="0.8" fill="#C62828"/>
-                  </svg>
-                  <span style={{ fontFamily: FONT.ui, fontSize: 12, color: '#C62828', letterSpacing: '-0.01em' }}>
-                    {FLAG_ITEMS.length} automated flag{FLAG_ITEMS.length !== 1 ? 's' : ''} require review
-                  </span>
+              {flagItems.length > 0 ? (
+                <>
+                  <div style={{ padding: '10px 20px 8px' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 14px', borderRadius: 10,
+                      background: 'rgba(198,40,40,0.06)', border: '1px solid rgba(198,40,40,0.12)',
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2l6 12H2L8 2Z" stroke="#C62828" strokeWidth="1.4" strokeLinejoin="round"/>
+                        <path d="M8 7v3" stroke="#C62828" strokeWidth="1.5" strokeLinecap="round"/>
+                        <circle cx="8" cy="12" r="0.8" fill="#C62828"/>
+                      </svg>
+                      <span style={{ fontFamily: FONT.ui, fontSize: 12, color: '#C62828', letterSpacing: '-0.01em' }}>
+                        {flagItems.length} automated flag{flagItems.length !== 1 ? 's' : ''} — computed from real logs
+                      </span>
+                    </div>
+                  </div>
+                  {flagItems.map((item, i) => (
+                    <FlagItem key={item.id} item={item} first={i === 0} />
+                  ))}
+                </>
+              ) : (
+                <div style={{ padding: '48px 28px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 6 }}>
+                    All clear
+                  </div>
+                  <div style={{ fontFamily: FONT.ui, fontSize: 12.5, color: T.mute, lineHeight: 1.5 }}>
+                    No one is currently flagged for rapid weight loss or a long gap without logging.
+                  </div>
                 </div>
-              </div>
-              {FLAG_ITEMS.map((item, i) => (
-                <FlagItem key={item.id} item={item} first={i === 0} />
-              ))}
+              )}
             </div>
           )}
 
           {/* Revenue */}
-          {activeTab === 'revenue' && (
+          {activeTab === 'revenue' && !loading && !loadError && (
             <div style={{ padding: '14px 16px 0' }}>
               {/* Headline MRR */}
               <div style={{ background: T.ink, color: T.inkText, borderRadius: 16, padding: '18px 18px 16px', marginBottom: 10 }}>
-                <div style={{ fontFamily: FONT.mono, fontSize: 8.5, color: 'rgba(250,250,247,0.5)', letterSpacing: '0.12em', marginBottom: 6 }}>MONTHLY RECURRING REVENUE</div>
+                <div style={{ fontFamily: FONT.mono, fontSize: 8.5, color: 'rgba(250,250,247,0.5)', letterSpacing: '0.12em', marginBottom: 6 }}>MONTHLY RECURRING REVENUE (EST.)</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 40, lineHeight: 1, letterSpacing: '-0.02em' }}>{SUB.mrr}</span>
-                  <span style={{ fontFamily: FONT.mono, fontSize: 11, color: T.accent, fontWeight: 600 }}>{SUB.mrrDelta}</span>
+                  <span style={{ fontFamily: FONT.serif, fontStyle: 'italic', fontSize: 40, lineHeight: 1, letterSpacing: '-0.02em' }}>${mrrVal.toFixed(2)}</span>
                 </div>
               </div>
               {/* Metric grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                <StatCard label="PLUS SUBSCRIBERS" value={SUB.plusUsers.toLocaleString()} delta={`${SUB.trialConv} trial conv.`} />
-                <StatCard label="FREE USERS"       value={SUB.freeUsers.toLocaleString()} />
-                <StatCard label="ACTIVE TRIALS"    value={SUB.trialsActive.toLocaleString()} delta="3-month" />
-                <StatCard label="ARPU"             value={SUB.arpu} />
+                <StatCard label="PLUS SUBSCRIBERS" value={plusCount} />
+                <StatCard label="FREE USERS"       value={freeCount} />
+                <StatCard label="ACTIVE TRIALS"    value={trialActiveCount} delta="3-month" />
+                <StatCard label="ARPU"             value={`$${arpuVal.toFixed(2)}`} />
               </div>
               {/* Plus vs Free split bar */}
-              <div style={{ background: T.card, border: `1px solid ${T.hair}`, borderRadius: 14, padding: '14px 16px', marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>PLUS VS FREE</span>
-                  <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint }}>{Math.round(SUB.plusUsers / (SUB.plusUsers + SUB.freeUsers) * 100)}% PAID</span>
+              {totalUsers > 0 && (
+                <div style={{ background: T.card, border: `1px solid ${T.hair}`, borderRadius: 14, padding: '14px 16px', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.mute, letterSpacing: '0.08em' }}>PLUS VS FREE</span>
+                    <span style={{ fontFamily: FONT.mono, fontSize: 9, color: T.faint }}>{paidPct}% PAID</span>
+                  </div>
+                  <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', background: T.surf2 }}>
+                    <div style={{ width: `${paidPct}%`, background: T.accent }} />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', background: T.surf2 }}>
-                  <div style={{ width: `${SUB.plusUsers / (SUB.plusUsers + SUB.freeUsers) * 100}%`, background: T.accent }} />
-                </div>
+              )}
+              <div style={{ fontFamily: FONT.ui, fontSize: 10.5, color: T.faint, lineHeight: 1.5, padding: '4px 4px 0' }}>
+                Reflects each account's stored subscription flag, not a connected payment processor. Churn isn't tracked yet.
               </div>
-              <MetaRow label="CHURN (30D)" value={SUB.churn} />
             </div>
           )}
 
@@ -668,34 +750,18 @@ export default function Admin({ onNavigate }) {
 
       </div>
 
-      {/* ── Acting-as banner (fixed bottom) ───────────────────── */}
+      {/* ── Signed-in-as banner (fixed bottom) ───────────────── */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
         background: '#111', borderTop: '1px solid #222',
         padding: '12px 20px 28px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         maxWidth: 430, margin: '0 auto',
       }}>
-        {/* Fake inner centering so fixed works */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
-          <div>
-            <div style={{ fontFamily: FONT.mono, fontSize: 8, color: 'rgba(250,250,247,0.35)', letterSpacing: '0.14em', marginBottom: 3 }}>
-              ACTING AS
-            </div>
-            <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 700, color: '#FAFAF7', letterSpacing: '-0.01em' }}>
-              {ADMIN.name} · {ADMIN.role}
-            </div>
-          </div>
-          <button
-            type="button"
-            style={{
-              padding: '8px 18px', borderRadius: 20,
-              border: '1px solid rgba(250,250,247,0.3)',
-              background: 'transparent', color: '#FAFAF7',
-              fontFamily: FONT.mono, fontSize: 10, fontWeight: 600,
-              letterSpacing: '0.08em', cursor: 'pointer',
-            }}
-          >SWITCH ROLE</button>
+        <div style={{ fontFamily: FONT.mono, fontSize: 8, color: 'rgba(250,250,247,0.35)', letterSpacing: '0.14em', marginBottom: 3 }}>
+          SIGNED IN AS
+        </div>
+        <div style={{ fontFamily: FONT.ui, fontSize: 14, fontWeight: 700, color: '#FAFAF7', letterSpacing: '-0.01em' }}>
+          {adminName || 'Admin'}{adminEmail ? ` · ${adminEmail}` : ''}
         </div>
       </div>
     </div>

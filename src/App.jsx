@@ -141,6 +141,29 @@ export default function App() {
     }
   }, [userSettings?.name]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // One-time cleanup of phantom injections. An earlier bug wrote a default
+  // 0.5 mg "injection" into EVERY day's log (even days the user only logged
+  // weight/mood), so 0.5 is the exact signature of a fabricated injection.
+  // Strip dose/injectionDate from any 0.5 mg entry so the injection history and
+  // next-dose projection reflect only real, user-logged shots. Runs once.
+  useEffect(() => {
+    if (cloud && !cloudLoaded) return
+    if (!userSettings?.name || userSettings.injCleanupV1) return
+    let changed = false
+    const cleaned = {}
+    for (const [date, e] of Object.entries(logs)) {
+      if (e && (e.dose === 0.5 || e.dose === '0.5')) {
+        const { dose, injectionDate, ...rest } = e
+        cleaned[date] = rest
+        changed = true
+      } else {
+        cleaned[date] = e
+      }
+    }
+    if (changed) setLogs(cleaned)
+    setUserSettings(prev => ({ ...prev, injCleanupV1: true }))
+  }, [cloud, cloudLoaded, userSettings?.name, userSettings?.injCleanupV1]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const entitlements = getEntitlements(userSettings)
 
   function handleUpgrade() {
@@ -204,10 +227,10 @@ export default function App() {
     if (screen === 'settings')     return <Settings userSettings={userSettings} onSaveSettings={setUserSettings} logs={logs} onNavigate={handleNav} onSignOut={handleSignOut} isAdmin={isAdminUser} {...gate} />
     if (screen === 'measurements') return <Measurements measurements={measurements} onUpdateMeasurements={setMeasurements} userSettings={userSettings} logs={logs} onNavigate={handleNav} {...gate} />
     if (screen === 'admin') {
-      if (!isAdminUser) return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} updateLog={updateLog} {...gate} />
+      if (!isAdminUser) return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} updateLog={updateLog} onSaveSettings={setUserSettings} {...gate} />
       return <Admin onNavigate={handleNav} adminName={userSettings?.name} adminEmail={trustedEmail} />
     }
-    return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} updateLog={updateLog} {...gate} />
+    return <Dashboard logs={logs} userSettings={userSettings} onNavigate={handleNav} updateLog={updateLog} onSaveSettings={setUserSettings} {...gate} />
   })()
 
   return <div key={screen} className="screen-transition">{screenEl}</div>

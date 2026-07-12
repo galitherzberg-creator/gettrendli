@@ -226,7 +226,7 @@ function computeProjection(logs, goalWeight, goalType = 'lose') {
 
 const PULL_THRESHOLD = 62
 
-export default function Dashboard({ logs, userSettings, onNavigate, updateLog, entitlements, onUpgrade }) {
+export default function Dashboard({ logs, userSettings, onNavigate, updateLog, onSaveSettings, entitlements, onUpgrade }) {
   const { name, startWeight, goalWeight, height, goalType = 'lose', proteinGoal = null, unitSystem = 'metric' } = userSettings
 
   // ── Unit helpers (weights stored in kg, display in lbs when US) ───────────
@@ -318,11 +318,10 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
   const [injDose,     setInjDose]     = useState('')
 
   function openInjEdit() {
-    // Pre-fill from last known injection
-    const last = Object.values(logs).filter(e => e.injectionDate && e.dose)
-      .sort((a, b) => (b.injectionDate > a.injectionDate ? 1 : -1))[0]
-    setInjDate(last?.injectionDate ?? todayISO)
-    setInjDose(last?.dose != null ? String(last.dose) : '')
+    // Log a taken injection. Pre-fill date with today and dose with the
+    // projected next dose (same as last time, or the manual override).
+    setInjDate(todayISO)
+    setInjDose(projectedDose != null ? String(projectedDose) : '')
     setInjOpen(true)
   }
 
@@ -330,7 +329,27 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
     if (!injDate) return
     const dose = parseFloat(injDose) || null
     updateLog(injDate, { ...(logs[injDate] || {}), injectionDate: injDate, dose })
+    // A logged injection consumes any manual next-dose override — future
+    // projections follow this newly logged dose.
+    if (onSaveSettings) onSaveSettings(prev => ({ ...prev, nextDoseOverride: null }))
     setInjOpen(false)
+  }
+
+  // Manual override for the projected NEXT dose (separate from logging a shot).
+  const [nextDoseOpen, setNextDoseOpen] = useState(false)
+  const [nextDoseVal,  setNextDoseVal]  = useState('')
+
+  function openNextDoseEdit() {
+    setNextDoseVal(projectedDose != null ? String(projectedDose) : '')
+    setNextDoseOpen(true)
+  }
+
+  function saveNextDose() {
+    const val = parseFloat(nextDoseVal)
+    if (onSaveSettings) {
+      onSaveSettings(prev => ({ ...prev, nextDoseOverride: Number.isFinite(val) ? val : null }))
+    }
+    setNextDoseOpen(false)
   }
 
   function onTouchStart(e) {
@@ -386,6 +405,10 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
   const weeklySummary = computeWeeklySummary(logs, goalType, proteinGoal)
   const sideEffects   = computeSideEffectTrends(logs)
   const doseHistory   = computeDoseHistory(logs)
+  // Projected next dose: default to the SAME dose as the last real injection,
+  // unless the user has manually set an override for the next shot.
+  const lastRealDose  = doseHistory[0]?.dose ?? null
+  const projectedDose = userSettings.nextDoseOverride ?? lastRealDose
   const projectedDate = computeProjection(logs, goalWeight, goalType)
   const protocolData  = computeProtocol(logs)
 
@@ -660,17 +683,51 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, e
                 <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontFamily: FONT.ui, fontSize: 13, fontWeight: 500 }}>
-                      {lastInjection?.dose
-                        ? `${lastInjection.dose} mg`
-                        : userSettings.dose
-                          ? `${userSettings.dose} mg`
-                          : 'Set dose'}
+                      {projectedDose != null ? `${projectedDose} mg` : 'Set dose'}
+                      {userSettings.nextDoseOverride != null && (
+                        <span style={{ fontFamily: FONT.mono, fontSize: 8, color: T.accent, letterSpacing: '0.08em', marginLeft: 6 }}>ADJUSTED</span>
+                      )}
                     </div>
                     <div style={{ fontFamily: FONT.mono, fontSize: 10, color: T.mute, letterSpacing: '0.08em', marginTop: 2 }}>
                       {nextInj.nextDate}
                     </div>
                   </div>
+                  <button onClick={openNextDoseEdit} style={{
+                    padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.hair}`,
+                    background: 'transparent', cursor: 'pointer',
+                    fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.1em', color: T.mute,
+                  }}>CHANGE DOSE</button>
                 </div>
+                {nextDoseOpen && (
+                  <div style={{ padding: '0 16px 14px' }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 8, color: T.mute, letterSpacing: '0.12em', marginBottom: 4 }}>
+                      PLANNED NEXT DOSE (MG)
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.25"
+                        value={nextDoseVal}
+                        onChange={e => setNextDoseVal(e.target.value)}
+                        placeholder={lastRealDose != null ? String(lastRealDose) : '1.0'}
+                        style={{
+                          flex: 1, border: `1px solid ${T.hair}`, borderRadius: 8,
+                          padding: '7px 10px', fontFamily: FONT.ui, fontSize: 13,
+                          background: T.card, outline: 'none', boxSizing: 'border-box', color: T.text,
+                        }}
+                      />
+                      <button onClick={() => setNextDoseOpen(false)} style={{
+                        padding: '7px 12px', borderRadius: 8, border: `1px solid ${T.hair}`,
+                        background: 'transparent', cursor: 'pointer', fontFamily: FONT.ui, fontSize: 13, color: T.mute,
+                      }}>Cancel</button>
+                      <button onClick={saveNextDose} style={{
+                        padding: '7px 14px', borderRadius: 8, border: 0, background: T.ink, cursor: 'pointer',
+                        fontFamily: FONT.ui, fontSize: 13, fontWeight: 600, color: T.inkText,
+                      }}>Save</button>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div style={{ padding: '10px 16px 16px' }}>

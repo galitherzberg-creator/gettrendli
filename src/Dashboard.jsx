@@ -945,6 +945,20 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
                 </div>
               ))}
             </div>
+            <button
+              onClick={() => setWeeklyOpen(true)}
+              style={{
+                width: '100%', marginTop: 16, padding: '12px 0', borderRadius: 12,
+                border: 0, background: T.ink, color: T.inkText, cursor: 'pointer',
+                fontFamily: FONT.ui, fontSize: 14, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>
+              </svg>
+              View weekly report
+            </button>
           </Card>
         </div>
 

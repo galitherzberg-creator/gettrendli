@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { computeWeeklyData, getWeekLabel, todayISO, formatDate, isoDate } from './logStore'
 import { T, FONT, Eyebrow, Hairline, Card, BigNumber, TabBar } from './tokens'
 import { TrialBanner } from './entitlements'
+import WeeklyReport, { currentWeekKey } from './WeeklyReport'
 
 // ── GLP-1 medication library ─────────────────────────────────────────────────
 const MEDICATIONS = [
@@ -412,6 +413,20 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
   const projectedDate = computeProjection(logs, goalWeight, goalType)
   const protocolData  = computeProtocol(logs)
 
+  // ── Weekly report: auto-pop once per week, when there's data worth recapping ──
+  const [weeklyOpen, setWeeklyOpen] = useState(false)
+  const thisWeekKey = currentWeekKey()
+  useEffect(() => {
+    const alreadyShown = userSettings.lastWeeklyReportWeek === thisWeekKey
+    const hasData = (weeklySummary?.daysLogged ?? 0) > 0
+    if (!alreadyShown && hasData) setWeeklyOpen(true)
+  }, [thisWeekKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function closeWeeklyReport() {
+    setWeeklyOpen(false)
+    if (onSaveSettings) onSaveSettings(prev => ({ ...prev, lastWeeklyReportWeek: thisWeekKey }))
+  }
+
   // Today's date display
   const todayDisplay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const firstName    = name ? name.split(' ')[0] : 'there'
@@ -438,6 +453,18 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      <WeeklyReport
+        open={weeklyOpen}
+        onClose={closeWeeklyReport}
+        firstName={firstName}
+        weeklySummary={weeklySummary}
+        sideEffects={sideEffects}
+        streak={streak}
+        nextInj={nextInj}
+        projectedDose={projectedDose}
+        goalType={goalType}
+      />
+
       {/* Pull refresh indicator */}
       {(pullY > 0 || refreshing) && (
         <div style={{
@@ -468,19 +495,35 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
               Morning, {firstName}.
             </div>
           </div>
-          <button
-            onClick={() => onNavigate('settings')}
-            style={{
-              width: 36, height: 36, borderRadius: 18,
-              border: `1px solid ${T.hair}`, display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              background: 'transparent', cursor: 'pointer',
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setWeeklyOpen(true)}
+              title="Weekly recap"
+              style={{
+                width: 36, height: 36, borderRadius: 18,
+                border: `1px solid ${T.hair}`, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', cursor: 'pointer',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => onNavigate('settings')}
+              style={{
+                width: 36, height: 36, borderRadius: 18,
+                border: `1px solid ${T.hair}`, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', cursor: 'pointer',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* ── HERO — black weight card ──────────────────────────────── */}

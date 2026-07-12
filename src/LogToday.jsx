@@ -251,10 +251,6 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
   const [steps,            setSteps]             = useState('')
   const [stepsGoal,        setStepsGoal]         = useState(10000)
 
-  // Injection (carried over)
-  const [injectionDate,    setInjectionDate]     = useState(todayISO)
-  const [dose,             setDose]              = useState(0.5)
-
   // Toast
   const [showToast,        setShowToast]         = useState(false)
   const [toastIsUpdate,    setToastIsUpdate]     = useState(false)
@@ -296,14 +292,11 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
       setActivityDuration(entry.activityDuration ?? '')
       setSteps(entry.steps ?? '')
       setStepsGoal(entry.stepsGoal ?? 10000)
-      setInjectionDate(entry.injectionDate ?? selectedDate)
-      setDose(entry.dose ?? 0.5)
     } else {
       setWeight(''); setCalories(''); setProtein(''); setFat(''); setFiber(''); setFoods([])
       setWater(0); setMood(null); setSideEffects([]); setHunger(40); setNote('')
       setWorkoutName(''); setWorkoutDate(''); setActivityType(''); setActivityDuration('')
       setSteps(''); setStepsGoal(10000)
-      setInjectionDate(selectedDate); setDose(0.5)
     }
     setWeightEditing(false)
     setWeightRaw('')
@@ -311,6 +304,12 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
 
   function handleSave() {
     const rawWeight = weight ? wParse(wFmt(weight)) || weight : ''
+    // Injections are only ever recorded through the Dashboard's explicit
+    // "Next injection" editor (a deliberate action with its own date + dose).
+    // Carry forward whatever is already on this day's entry as-is — including
+    // nothing at all — so saving the daily log never invents or overwrites an
+    // injection the user didn't actually log.
+    const existing = logs[selectedDate] || {}
     updateLog(selectedDate, {
       weight:           rawWeight || null,
       calories:         calories || null,
@@ -329,8 +328,8 @@ export default function LogToday({ logs, updateLog, userSettings = {}, onNavigat
       activityDuration: activityDuration || null,
       steps:            steps || null,
       stepsGoal,
-      injectionDate:    injectionDate || null,
-      dose,
+      injectionDate:    existing.injectionDate ?? null,
+      dose:             existing.dose ?? null,
     })
     setToastIsUpdate(!!logs[selectedDate])
     setShowToast(true)

@@ -3,6 +3,7 @@ import { computeWeeklyData, getWeekLabel, todayISO, formatDate, isoDate } from '
 import { T, FONT, Eyebrow, Hairline, Card, BigNumber, TabBar } from './tokens'
 import { TrialBanner } from './entitlements'
 import WeeklyReport, { currentWeekKey } from './WeeklyReport'
+import TDEECalculator from './TDEECalculator'
 
 // ── GLP-1 medication library ─────────────────────────────────────────────────
 const MEDICATIONS = [
@@ -427,6 +428,9 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
     if (onSaveSettings) onSaveSettings(prev => ({ ...prev, lastWeeklyReportWeek: thisWeekKey }))
   }
 
+  // Calorie (TDEE) calculator modal
+  const [tdeeOpen, setTdeeOpen] = useState(false)
+
   // Today's date display
   const todayDisplay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const firstName    = name ? name.split(' ')[0] : 'there'
@@ -463,6 +467,14 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
         nextInj={nextInj}
         projectedDose={projectedDose}
         goalType={goalType}
+      />
+
+      <TDEECalculator
+        open={tdeeOpen}
+        onClose={() => setTdeeOpen(false)}
+        userSettings={userSettings}
+        onSaveSettings={onSaveSettings}
+        latestWeight={latestWeight}
       />
 
       {/* Pull refresh indicator */}
@@ -958,6 +970,20 @@ export default function Dashboard({ logs, userSettings, onNavigate, updateLog, o
                 <path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>
               </svg>
               View weekly report
+            </button>
+            <button
+              onClick={() => setTdeeOpen(true)}
+              style={{
+                width: '100%', marginTop: 8, padding: '12px 0', borderRadius: 12,
+                border: `1px solid ${T.hair}`, background: 'transparent', color: T.text, cursor: 'pointer',
+                fontFamily: FONT.ui, fontSize: 14, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3a9 9 0 109 9h-9V3z"/><path d="M12 3v9h9"/>
+              </svg>
+              Calorie calculator
             </button>
           </Card>
         </div>
